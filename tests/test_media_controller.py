@@ -31,6 +31,12 @@ class FakeVLCPlayer:
         self.stop_called = 0
         self.fail_play = False
         self.raise_on_play = False
+        self.fail_volume = False
+        self.raise_on_volume = False
+        self.fail_mute = False
+        self.raise_on_mute = False
+        self.raise_on_pause = False
+        self.raise_on_stop = False
 
     def set_media(self, media):
         self.media = media
@@ -45,15 +51,21 @@ class FakeVLCPlayer:
         return 0
 
     def pause(self):
+        if self.raise_on_pause:
+            raise RuntimeError("Underlying libVLC pause crash")
         if self.state == "PLAYING":
             self.state = "PAUSED"
         elif self.state == "PAUSED":
             self.state = "PLAYING"
 
     def set_pause(self, do_pause: int):
+        if self.raise_on_pause:
+            raise RuntimeError("Underlying libVLC pause crash")
         self.state = "PAUSED" if do_pause else "PLAYING"
 
     def stop(self):
+        if self.raise_on_stop:
+            raise RuntimeError("Underlying libVLC stop crash")
         self.state = "STOPPED"
         self.stop_called += 1
 
@@ -61,10 +73,20 @@ class FakeVLCPlayer:
         return 1 if self.state == "PLAYING" else 0
 
     def audio_set_volume(self, vol: int):
+        if self.raise_on_volume:
+            raise RuntimeError("Hardware mixer communication error")
+        if self.fail_volume:
+            return -1
         self.volume = vol
+        return 0
 
     def audio_set_mute(self, mute: bool):
+        if self.raise_on_mute:
+            raise RuntimeError("Hardware mute line disconnected")
+        if self.fail_mute:
+            return -1
         self.muted = bool(mute)
+        return 0
 
 
 class FakeVLCInstance:
@@ -276,7 +298,7 @@ def test_previous_track_sequential_backward(controller, mock_files):
 
 
 # =========================================================================
-# 4. Volume Increment, Decrement, and Limits (0–100)
+# 4. Volume Increment, Decrement, and Limits (Inclusive 0–100%)
 # =========================================================================
 
 def test_volume_up_increment(controller):
@@ -290,7 +312,7 @@ def test_volume_up_increment(controller):
 
 
 def test_volume_up_clamp_at_100(controller):
-    """Verify VOLUME_UP cannot exceed 100%."""
+    """Verify VOLUME_UP cannot exceed inclusive 100% maximum."""
     controller.execute("VOLUME_UP")  # 80
     controller.execute("VOLUME_UP")  # 90
     controller.execute("VOLUME_UP")  # 100
@@ -314,7 +336,7 @@ def test_volume_down_decrement(controller):
 
 
 def test_volume_down_clamp_at_0(controller):
-    """Verify VOLUME_DOWN cannot go below 0%."""
+    """Verify VOLUME_DOWN cannot go below inclusive 0% minimum."""
     for _ in range(8):
         controller.execute("VOLUME_DOWN")
     assert controller.volume == 0
@@ -388,26 +410,196 @@ def test_vlc_player_failure_code(controller):
     res = controller.execute("PLAY")
     assert res["success"] is False
     assert "Failed to start playback" in res["status"]
+    assert "error_details" in res
 
 
 def test_vlc_player_runtime_exception(controller):
-    """Verify underlying player exception is caught and returned cleanly."""
+    """Verify underlying player exception is caught, returns controlled status, and preserves diagnostics."""
     controller.player.raise_on_play = True
     res = controller.execute("PLAY")
     assert res["success"] is False
-    assert "Playback failure: Underlying libVLC fatal crash" in res["status"]
+    assert res["status"] == "Failed to start media playback."
+    assert "Underlying libVLC fatal crash" not in res["status"]
+    assert "Underlying libVLC fatal crash" in res["error_details"]
 
 
 def test_vlc_unavailable_error():
-    """Verify behavior when VLC is not available."""
+    """Verify behavior for all commands when VLC is not available."""
     ctrl = MediaController(media_files=["dummy.mp3"], vlc_instance=None, player=None)
     ctrl.vlc_available = False
     ctrl.player = None
 
-    res_play = ctrl.execute("PLAY")
-    assert res_play["success"] is False
-    assert "unavailable" in res_play["status"]
+    for cmd in ["PLAY", "PAUSE", "RESUME", "STOP", "VOLUME_UP", "VOLUME_DOWN", "MUTE"]:
+        res = ctrl.execute(cmd)
+        assert res["success"] is False
+        assert "unavailable" in res["status"]
+        assert "error_details" in res
 
-    res_pause = ctrl.execute("PAUSE")
-    assert res_pause["success"] is False
-    assert "unavailable" in res_pause["status"]
+
+# =========================================================================
+# 7. Focused Failure Tests: Volume & Mute Failures (VLC Unavailable & API Errors)
+# =========================================================================
+
+def test_volume_up_when_vlc_unavailable():
+    """Verify VOLUME_UP returns controlled failure when VLC player is unavailable."""
+    ctrl = MediaController(media_files=["song.mp3"], vlc_instance=None, player=None)
+    ctrl.vlc_available = False
+    ctrl.player = None
+
+    res = ctrl.execute("VOLUME_UP")
+    assert res["success"] is False
+    assert "VLC media player is unavailable" in res["status"]
+    assert "error_details" in res
+    assert ctrl.volume == 70
+
+
+def test_volume_down_when_vlc_unavailable():
+    """Verify VOLUME_DOWN returns controlled failure when VLC player is unavailable."""
+    ctrl = MediaController(media_files=["song.mp3"], vlc_instance=None, player=None)
+    ctrl.vlc_available = False
+    ctrl.player = None
+
+    res = ctrl.execute("VOLUME_DOWN")
+    assert res["success"] is False
+    assert "VLC media player is unavailable" in res["status"]
+    assert "error_details" in res
+    assert ctrl.volume == 70
+
+
+def test_mute_when_vlc_unavailable():
+    """Verify MUTE returns controlled failure when VLC player is unavailable."""
+    ctrl = MediaController(media_files=["song.mp3"], vlc_instance=None, player=None)
+    ctrl.vlc_available = False
+    ctrl.player = None
+
+    res = ctrl.execute("MUTE")
+    assert res["success"] is False
+    assert "VLC media player is unavailable" in res["status"]
+    assert "error_details" in res
+    assert ctrl.is_muted is False
+
+
+def test_volume_up_when_audio_api_returns_error_code(controller):
+    """Verify VOLUME_UP fails cleanly when player.audio_set_volume returns -1."""
+    controller.player.fail_volume = True
+    initial_volume = controller.volume
+
+    res = controller.execute("VOLUME_UP")
+    assert res["success"] is False
+    assert res["status"] == "Failed to increase volume."
+    assert "error_details" in res
+    assert controller.volume == initial_volume
+
+
+def test_volume_up_when_audio_api_raises_exception(controller):
+    """Verify VOLUME_UP fails cleanly without exposing exception when player raises exception."""
+    controller.player.raise_on_volume = True
+    initial_volume = controller.volume
+
+    res = controller.execute("VOLUME_UP")
+    assert res["success"] is False
+    assert res["status"] == "Failed to increase volume."
+    assert "Hardware mixer communication error" not in res["status"]
+    assert "Hardware mixer communication error" in res["error_details"]
+    assert controller.volume == initial_volume
+
+
+def test_volume_down_when_audio_api_returns_error_code(controller):
+    """Verify VOLUME_DOWN fails cleanly when player.audio_set_volume returns -1."""
+    controller.player.fail_volume = True
+    initial_volume = controller.volume
+
+    res = controller.execute("VOLUME_DOWN")
+    assert res["success"] is False
+    assert res["status"] == "Failed to decrease volume."
+    assert "error_details" in res
+    assert controller.volume == initial_volume
+
+
+def test_volume_down_when_audio_api_raises_exception(controller):
+    """Verify VOLUME_DOWN fails cleanly without exposing exception when player raises exception."""
+    controller.player.raise_on_volume = True
+    initial_volume = controller.volume
+
+    res = controller.execute("VOLUME_DOWN")
+    assert res["success"] is False
+    assert res["status"] == "Failed to decrease volume."
+    assert "Hardware mixer communication error" not in res["status"]
+    assert "Hardware mixer communication error" in res["error_details"]
+    assert controller.volume == initial_volume
+
+
+def test_mute_when_audio_api_returns_error_code(controller):
+    """Verify MUTE fails cleanly when player.audio_set_mute returns -1."""
+    controller.player.fail_mute = True
+    initial_mute = controller.is_muted
+
+    res = controller.execute("MUTE")
+    assert res["success"] is False
+    assert res["status"] == "Failed to toggle audio mute."
+    assert "error_details" in res
+    assert controller.is_muted == initial_mute
+
+
+def test_mute_when_audio_api_raises_exception(controller):
+    """Verify MUTE fails cleanly without exposing exception when player raises exception."""
+    controller.player.raise_on_mute = True
+    initial_mute = controller.is_muted
+
+    res = controller.execute("MUTE")
+    assert res["success"] is False
+    assert res["status"] == "Failed to toggle audio mute."
+    assert "Hardware mute line disconnected" not in res["status"]
+    assert "Hardware mute line disconnected" in res["error_details"]
+    assert controller.is_muted == initial_mute
+
+
+# =========================================================================
+# 8. Controlled Error Messages: No Raw Exception Details in User Status
+# =========================================================================
+
+def test_pause_runtime_exception_controlled_message(controller):
+    """Verify PAUSE failure does not expose raw exception text in user status."""
+    controller.execute("PLAY")
+    controller.player.raise_on_pause = True
+
+    res = controller.execute("PAUSE")
+    assert res["success"] is False
+    assert res["status"] == "Failed to pause media playback."
+    assert "Underlying libVLC pause crash" not in res["status"]
+    assert "Underlying libVLC pause crash" in res["error_details"]
+
+
+def test_resume_runtime_exception_controlled_message(controller):
+    """Verify RESUME failure does not expose raw exception text in user status."""
+    controller.execute("PLAY")
+    controller.execute("PAUSE")
+    controller.player.raise_on_pause = True
+
+    res = controller.execute("RESUME")
+    assert res["success"] is False
+    assert res["status"] == "Failed to resume media playback."
+    assert "Underlying libVLC pause crash" not in res["status"]
+    assert "Underlying libVLC pause crash" in res["error_details"]
+
+
+def test_stop_runtime_exception_controlled_message(controller):
+    """Verify STOP failure does not expose raw exception text in user status."""
+    controller.execute("PLAY")
+    controller.player.raise_on_stop = True
+
+    res = controller.execute("STOP")
+    assert res["success"] is False
+    assert res["status"] == "Failed to stop media playback."
+    assert "Underlying libVLC stop crash" not in res["status"]
+    assert "Underlying libVLC stop crash" in res["error_details"]
+
+
+def test_no_raw_exception_exposed_in_user_facing_status(controller):
+    """Verify that simulated internal errors never leak exception details to user status."""
+    controller.player.raise_on_play = True
+    res = controller.execute("PLAY")
+    assert res["success"] is False
+    assert "RuntimeError" not in res["status"]
+    assert "crash" not in res["status"]
+    assert "error_details" in res

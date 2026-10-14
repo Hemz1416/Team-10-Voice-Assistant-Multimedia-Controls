@@ -10,12 +10,12 @@
 
 ## Section A: Automated Unit Tests (Mocks / Fakes)
 
-The test suite validates all 9 media intents, playlist wrap-around, volume boundaries (0–100), mute toggling, and robust error recovery without requiring physical audio hardware, GUI, or a Raspberry Pi.
+The test suite validates all 9 media intents, playlist wrap-around, inclusive volume boundaries (0–100%), mute toggling, and robust error recovery without requiring physical audio hardware, GUI, or a Raspberry Pi.
 
 - **Test Command:**  
   `.\.venv\Scripts\python.exe -m pytest -v`
-- **Execution Date:** 2026-10-14 17:30:57 IST
-- **Result:** **26 passed in 0.10s** (100% pass rate)
+- **Execution Date:** 2026-10-14 20:04:27 IST
+- **Result:** **39 passed in 1.14s** (100% pass rate)
 
 ### Individual Test Execution Summary:
 
@@ -38,21 +38,34 @@ The test suite validates all 9 media intents, playlist wrap-around, volume bound
 | 15 | `test_previous_track_wraparound_first_to_last` | `PREVIOUS` wraps around from first track (index 0) to last (index 2) | **PASSED** |
 | 16 | `test_previous_track_sequential_backward` | `PREVIOUS` advances backward from track 3 to track 2 | **PASSED** |
 | 17 | `test_volume_up_increment` | `VOLUME_UP` increments volume by +10% (70 -> 80) | **PASSED** |
-| 18 | `test_volume_up_clamp_at_100` | `VOLUME_UP` clamps strictly at 100% maximum | **PASSED** |
+| 18 | `test_volume_up_clamp_at_100` | `VOLUME_UP` clamps strictly at inclusive 100% maximum | **PASSED** |
 | 19 | `test_volume_down_decrement` | `VOLUME_DOWN` decrements volume by -10% (70 -> 60) | **PASSED** |
-| 20 | `test_volume_down_clamp_at_0` | `VOLUME_DOWN` clamps strictly at 0% minimum | **PASSED** |
+| 20 | `test_volume_down_clamp_at_0` | `VOLUME_DOWN` clamps strictly at inclusive 0% minimum | **PASSED** |
 | 21 | `test_mute_toggle_on_and_off` | `MUTE` toggles predictably between True and False | **PASSED** |
 | 22 | `test_empty_playlist_handling` | Empty playlist on `PLAY`, `NEXT`, `PREVIOUS` returns controlled failure | **PASSED** |
 | 23 | `test_missing_media_file_handling` | Missing/non-existent audio file returns controlled file not found | **PASSED** |
 | 24 | `test_vlc_player_failure_code` | Player error code (-1) handled cleanly without crashing | **PASSED** |
-| 25 | `test_vlc_player_runtime_exception` | Player runtime exception caught cleanly and reported | **PASSED** |
-| 26 | `test_vlc_unavailable_error` | VLC missing/unavailable returns controlled failure | **PASSED** |
+| 25 | `test_vlc_player_runtime_exception` | Player runtime exception caught cleanly; no raw exception leaked to status | **PASSED** |
+| 26 | `test_vlc_unavailable_error` | VLC missing/unavailable returns controlled failure for all commands | **PASSED** |
+| 27 | `test_volume_up_when_vlc_unavailable` | `VOLUME_UP` returns failure when VLC unavailable without updating volume | **PASSED** |
+| 28 | `test_volume_down_when_vlc_unavailable` | `VOLUME_DOWN` returns failure when VLC unavailable without updating volume | **PASSED** |
+| 29 | `test_mute_when_vlc_unavailable` | `MUTE` returns failure when VLC unavailable without toggling state | **PASSED** |
+| 30 | `test_volume_up_when_audio_api_returns_error_code` | `VOLUME_UP` reports failure when API returns -1 without state change | **PASSED** |
+| 31 | `test_volume_up_when_audio_api_raises_exception` | `VOLUME_UP` masks raw exception in status and preserves error_details | **PASSED** |
+| 32 | `test_volume_down_when_audio_api_returns_error_code` | `VOLUME_DOWN` reports failure when API returns -1 without state change | **PASSED** |
+| 33 | `test_volume_down_when_audio_api_raises_exception` | `VOLUME_DOWN` masks raw exception in status and preserves error_details | **PASSED** |
+| 34 | `test_mute_when_audio_api_returns_error_code` | `MUTE` reports failure when API returns -1 without state change | **PASSED** |
+| 35 | `test_mute_when_audio_api_raises_exception` | `MUTE` masks raw exception in status and preserves error_details | **PASSED** |
+| 36 | `test_pause_runtime_exception_controlled_message` | `PAUSE` exception caught with clean status and diagnostic error_details | **PASSED** |
+| 37 | `test_resume_runtime_exception_controlled_message` | `RESUME` exception caught with clean status and diagnostic error_details | **PASSED** |
+| 38 | `test_stop_runtime_exception_controlled_message` | `STOP` exception caught with clean status and diagnostic error_details | **PASSED** |
+| 39 | `test_no_raw_exception_exposed_in_user_facing_status` | Confirms user status never exposes stack traces or exception strings | **PASSED** |
 
 ---
 
 ## Section B: Actual Local Playback Checks (Real libVLC)
 
-An actual hardware/software playback verification was executed on the local development machine using native `libvlc.dll` (from VideoLAN VLC v3.0.x) and short synthetic PCM test audio files (`track1_test.wav` and `track2_test.wav`).
+An actual hardware/software playback verification was executed on the local development machine using native `libvlc.dll` (from VideoLAN VLC v3.0.x) and synthetic PCM test audio files (`track1_5s.wav` and `track2_5s.wav`).
 
 - **Verification Script:** Executed inside `.venv` Python 3.11 environment.
 - **VLC Instance Status:** Successfully initialized (`ctrl.vlc_available == True`).
@@ -61,24 +74,24 @@ An actual hardware/software playback verification was executed on the local deve
 ```python
 # Actual outputs recorded during test run:
 1. PLAY:
-   Output: {'success': True, 'status': 'Playing track 1: track1_test.wav', 'track': '...\\track1_test.wav', 'track_index': 0}
+   Output: {'success': True, 'status': 'Playing track 1: track1_5s.wav', 'track': '...\\track1_5s.wav', 'track_index': 0}
    Observed: Audio buffer loaded into libVLC and playback initiated.
 
 2. PAUSE:
-   Output: {'success': True, 'status': 'Paused: track1_test.wav'}
+   Output: {'success': True, 'status': 'Paused: track1_5s.wav'}
    Observed: Playback transitioned to Paused state via libVLC set_pause(1).
 
 3. RESUME:
-   Output: {'success': True, 'status': 'Resumed playback: track1_test.wav'}
+   Output: {'success': True, 'status': 'Resumed playback: track1_5s.wav'}
    Observed: Playback resumed cleanly via libVLC set_pause(0).
 
 4. VOLUME_UP:
    Output: {'success': True, 'status': 'Volume increased to 80%', 'volume': 80}
-   Observed: Volume incremented by 10% and applied to player.
+   Observed: Volume incremented by 10% within inclusive 0–100% range and applied to player.
 
 5. VOLUME_DOWN:
    Output: {'success': True, 'status': 'Volume decreased to 70%', 'volume': 70}
-   Observed: Volume decremented by 10% and applied to player.
+   Observed: Volume decremented by 10% within inclusive 0–100% range and applied to player.
 
 6. MUTE (Toggle ON):
    Output: {'success': True, 'status': 'Audio muted.', 'is_muted': True}
@@ -89,11 +102,11 @@ An actual hardware/software playback verification was executed on the local deve
    Observed: Audio mute disabled on player.
 
 8. NEXT:
-   Output: {'success': True, 'status': 'Playing track 2: track2_test.wav', 'track': '...\\track2_test.wav', 'track_index': 1}
+   Output: {'success': True, 'status': 'Playing track 2: track2_5s.wav', 'track': '...\\track2_5s.wav', 'track_index': 1}
    Observed: Previous track stopped and next track started seamlessly.
 
 9. PREVIOUS:
-   Output: {'success': True, 'status': 'Playing track 1: track1_test.wav', 'track': '...\\track1_test.wav', 'track_index': 0}
+   Output: {'success': True, 'status': 'Playing track 1: track1_5s.wav', 'track': '...\\track1_5s.wav', 'track_index': 0}
    Observed: Track 2 stopped and track 1 resumed.
 
 10. STOP:
@@ -101,7 +114,7 @@ An actual hardware/software playback verification was executed on the local deve
     Observed: libVLC player halted and resources freed.
 ```
 
-- **Playback Verification Verdict:** **PASSED** (Real libVLC playback, state transitions, audio controls, and track switching verified).
+- **Playback Verification Verdict:** **PASSED** (Real libVLC playback, state transitions, audio controls, and track switching verified across all 10 actions).
 
 ---
 

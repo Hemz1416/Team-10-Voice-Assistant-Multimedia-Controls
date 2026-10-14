@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 try:
     import vlc
@@ -103,7 +103,7 @@ class MediaController:
 
     @property
     def volume(self) -> int:
-        """Return current volume percentage (0-100)."""
+        """Return current volume percentage within inclusive 0–100%."""
         return self._volume
 
     @property
@@ -124,7 +124,8 @@ class MediaController:
             intent: String representing the multimedia action.
 
         Returns:
-            Dict containing at minimum 'success' (bool) and 'status' (str).
+            Dict containing at minimum 'success' (bool) and 'status' (str),
+            plus optional developer diagnostics ('error_details') on failure.
         """
         if not intent or not isinstance(intent, str):
             return {
@@ -158,7 +159,8 @@ class MediaController:
         except Exception as exc:
             return {
                 "success": False,
-                "status": f"Media player error: {str(exc)}",
+                "status": "An unexpected media player error occurred.",
+                "error_details": str(exc),
             }
 
     def play(self) -> Dict[str, Any]:
@@ -172,7 +174,8 @@ class MediaController:
         if not self.vlc_available or self.player is None:
             return {
                 "success": False,
-                "status": "VLC media player is unavailable on this system.",
+                "status": "VLC media player is unavailable.",
+                "error_details": "Player instance not initialized or VLC unavailable.",
             }
 
         # If currently paused, resume instead of restarting track
@@ -202,6 +205,7 @@ class MediaController:
                 return {
                     "success": False,
                     "status": f"Failed to start playback for: {os.path.basename(track_path)}",
+                    "error_details": "libVLC play returned error code -1",
                 }
 
             # Apply stored volume and mute settings to player
@@ -219,7 +223,8 @@ class MediaController:
         except Exception as exc:
             return {
                 "success": False,
-                "status": f"Playback failure: {str(exc)}",
+                "status": "Failed to start media playback.",
+                "error_details": str(exc),
             }
 
     def pause(self) -> Dict[str, Any]:
@@ -228,6 +233,7 @@ class MediaController:
             return {
                 "success": False,
                 "status": "VLC media player is unavailable.",
+                "error_details": "Player instance not initialized or VLC unavailable.",
             }
 
         if self._is_paused:
@@ -258,7 +264,8 @@ class MediaController:
         except Exception as exc:
             return {
                 "success": False,
-                "status": f"Pause failure: {str(exc)}",
+                "status": "Failed to pause media playback.",
+                "error_details": str(exc),
             }
 
     def resume(self) -> Dict[str, Any]:
@@ -267,6 +274,7 @@ class MediaController:
             return {
                 "success": False,
                 "status": "VLC media player is unavailable.",
+                "error_details": "Player instance not initialized or VLC unavailable.",
             }
 
         if not self._media_files:
@@ -299,7 +307,8 @@ class MediaController:
             except Exception as exc:
                 return {
                     "success": False,
-                    "status": f"Resume failure: {str(exc)}",
+                    "status": "Failed to resume media playback.",
+                    "error_details": str(exc),
                 }
 
         # If not paused, start playback
@@ -311,6 +320,7 @@ class MediaController:
             return {
                 "success": False,
                 "status": "VLC media player is unavailable.",
+                "error_details": "Player instance not initialized or VLC unavailable.",
             }
 
         try:
@@ -326,7 +336,8 @@ class MediaController:
         except Exception as exc:
             return {
                 "success": False,
-                "status": f"Stop failure: {str(exc)}",
+                "status": "Failed to stop media playback.",
+                "error_details": str(exc),
             }
 
     def next_track(self) -> Dict[str, Any]:
@@ -355,11 +366,56 @@ class MediaController:
         self._is_paused = False
         return self.play()
 
+    def _set_player_volume(self, target_volume: int) -> Tuple[bool, Optional[str]]:
+        """Attempt to set volume on the player. Returns (success, error_detail)."""
+        if not self.vlc_available or self.player is None:
+            return False, "Player instance not initialized or VLC unavailable."
+
+        if hasattr(self.player, "audio_set_volume"):
+            try:
+                ret = self.player.audio_set_volume(target_volume)
+                # In libvlc C API, audio_set_volume returns 0 on success, -1 on failure
+                if ret == -1:
+                    return False, "Underlying audio engine rejected volume setting (returned -1)."
+            except Exception as exc:
+                return False, f"Exception in audio_set_volume: {str(exc)}"
+        return True, None
+
+    def _set_player_mute(self, target_mute: bool) -> Tuple[bool, Optional[str]]:
+        """Attempt to set mute on the player. Returns (success, error_detail)."""
+        if not self.vlc_available or self.player is None:
+            return False, "Player instance not initialized or VLC unavailable."
+
+        if hasattr(self.player, "audio_set_mute"):
+            try:
+                ret = self.player.audio_set_mute(target_mute)
+                if ret == -1:
+                    return False, "Underlying audio engine rejected mute toggle (returned -1)."
+            except Exception as exc:
+                return False, f"Exception in audio_set_mute: {str(exc)}"
+        return True, None
+
     def volume_up(self, step: Optional[int] = None) -> Dict[str, Any]:
-        """Increase volume by step (default 10), clamped at 100."""
+        """Increase volume by step (default 10), clamped within inclusive 0–100%."""
+        if not self.vlc_available or self.player is None:
+            return {
+                "success": False,
+                "status": "VLC media player is unavailable.",
+                "error_details": "Player instance not initialized or VLC unavailable.",
+            }
+
         increment = step if step is not None else self.VOLUME_STEP
-        self._volume = min(self.MAX_VOLUME, self._volume + increment)
-        self._apply_audio_settings()
+        target_volume = min(self.MAX_VOLUME, self._volume + increment)
+
+        ok, err = self._set_player_volume(target_volume)
+        if not ok:
+            return {
+                "success": False,
+                "status": "Failed to increase volume.",
+                "error_details": err,
+            }
+
+        self._volume = target_volume
         return {
             "success": True,
             "status": f"Volume increased to {self._volume}%",
@@ -367,10 +423,26 @@ class MediaController:
         }
 
     def volume_down(self, step: Optional[int] = None) -> Dict[str, Any]:
-        """Decrease volume by step (default 10), clamped at 0."""
+        """Decrease volume by step (default 10), clamped within inclusive 0–100%."""
+        if not self.vlc_available or self.player is None:
+            return {
+                "success": False,
+                "status": "VLC media player is unavailable.",
+                "error_details": "Player instance not initialized or VLC unavailable.",
+            }
+
         decrement = step if step is not None else self.VOLUME_STEP
-        self._volume = max(self.MIN_VOLUME, self._volume - decrement)
-        self._apply_audio_settings()
+        target_volume = max(self.MIN_VOLUME, self._volume - decrement)
+
+        ok, err = self._set_player_volume(target_volume)
+        if not ok:
+            return {
+                "success": False,
+                "status": "Failed to decrease volume.",
+                "error_details": err,
+            }
+
+        self._volume = target_volume
         return {
             "success": True,
             "status": f"Volume decreased to {self._volume}%",
@@ -379,8 +451,23 @@ class MediaController:
 
     def toggle_mute(self) -> Dict[str, Any]:
         """Toggle mute state predictably."""
-        self._is_muted = not self._is_muted
-        self._apply_audio_settings()
+        if not self.vlc_available or self.player is None:
+            return {
+                "success": False,
+                "status": "VLC media player is unavailable.",
+                "error_details": "Player instance not initialized or VLC unavailable.",
+            }
+
+        target_mute = not self._is_muted
+        ok, err = self._set_player_mute(target_mute)
+        if not ok:
+            return {
+                "success": False,
+                "status": "Failed to toggle audio mute.",
+                "error_details": err,
+            }
+
+        self._is_muted = target_mute
         state_str = "Audio muted." if self._is_muted else "Audio unmuted."
         return {
             "success": True,
@@ -407,10 +494,5 @@ class MediaController:
         """Apply current volume and mute settings to the underlying player."""
         if not self.vlc_available or self.player is None:
             return
-        try:
-            if hasattr(self.player, "audio_set_volume"):
-                self.player.audio_set_volume(self._volume)
-            if hasattr(self.player, "audio_set_mute"):
-                self.player.audio_set_mute(self._is_muted)
-        except Exception:
-            pass
+        self._set_player_volume(self._volume)
+        self._set_player_mute(self._is_muted)
