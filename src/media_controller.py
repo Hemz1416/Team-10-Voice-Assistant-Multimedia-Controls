@@ -2,7 +2,7 @@
 Team 10 Voice Assistant - Media Controller Module
 Component Owner: Hemant Ram Nelapati (T10VA-6 / T10VA-13)
 
-Sprint 1 Day 1 (Oct 19, 2026): Base architecture, class skeleton, and intent validation.
+Sprint 1 Day 2 (Oct 20, 2026): PLAY handler with VLC media loading and missing file checks.
 """
 
 from __future__ import annotations
@@ -151,14 +151,49 @@ class MediaController:
                 "status": "Playlist is empty. No media to play.",
             }
 
-        track_path = self._media_files[self._current_index]
-        if self.player and hasattr(self.player, "play"):
-            self.player.play()
+        if not self.vlc_available or self.player is None:
+            return {
+                "success": False,
+                "status": "VLC media player is unavailable.",
+                "error_details": "Player instance not initialized or VLC unavailable.",
+            }
 
-        track_name = os.path.basename(track_path)
-        return {
-            "success": True,
-            "status": f"Playing track {self._current_index + 1}: {track_name}",
-            "track": track_path,
-            "track_index": self._current_index,
-        }
+        if self._is_paused:
+            return self.resume()
+
+        track_path = self._media_files[self._current_index]
+        resolved_path = os.path.abspath(track_path)
+
+        if not os.path.exists(resolved_path):
+            return {
+                "success": False,
+                "status": f"Media file not found: {track_path}",
+            }
+
+        try:
+            if hasattr(self.player, "stop"):
+                self.player.stop()
+
+            if self.vlc_instance and hasattr(self.vlc_instance, "media_new"):
+                media = self.vlc_instance.media_new(resolved_path)
+                if hasattr(self.player, "set_media"):
+                    self.player.set_media(media)
+
+            if hasattr(self.player, "play"):
+                self.player.play()
+
+            self._is_paused = False
+            self._has_played_current = True
+            track_name = os.path.basename(track_path)
+            return {
+                "success": True,
+                "status": f"Playing track {self._current_index + 1}: {track_name}",
+                "track": track_path,
+                "track_index": self._current_index,
+            }
+        except Exception as exc:
+            return {
+                "success": False,
+                "status": "Failed to start media playback.",
+                "error_details": str(exc),
+            }

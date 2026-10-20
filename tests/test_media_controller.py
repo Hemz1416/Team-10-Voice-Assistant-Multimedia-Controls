@@ -173,3 +173,33 @@ def test_execute_unsupported_intent(controller):
 # =========================================================================
 
 
+def test_play_success(controller, mock_files):
+    """Verify PLAY starts playback of the first track."""
+    res = controller.execute("PLAY")
+    assert res["success"] is True
+    assert "song1.mp3" in res["status"]
+    assert controller.player.state == "PLAYING"
+    assert controller.is_playing() is True
+
+
+def test_empty_playlist_handling():
+    """Verify empty playlist returns controlled failures."""
+    ctrl = MediaController(media_files=[], vlc_instance=FakeVLCInstance(), player=FakeVLCPlayer())
+
+    res_play = ctrl.execute("PLAY")
+    assert res_play["success"] is False
+    assert "Playlist is empty" in res_play["status"]
+
+
+def test_missing_media_file_handling():
+    """Verify missing/non-existent media file returns controlled failure."""
+    ctrl = MediaController(
+        media_files=["/non/existent/path/song.mp3"],
+        vlc_instance=FakeVLCInstance(),
+        player=FakeVLCPlayer(),
+    )
+    res = ctrl.execute("PLAY")
+    assert res["success"] is False
+    assert "Media file not found" in res["status"]
+
+
