@@ -203,3 +203,29 @@ def test_missing_media_file_handling():
     assert "Media file not found" in res["status"]
 
 
+def test_pause_success(controller):
+    """Verify PAUSE pauses active playback."""
+    controller.execute("PLAY")
+    res = controller.execute("PAUSE")
+    assert res["success"] is True
+    assert "Paused: song1.mp3" in res["status"]
+    assert controller.is_paused() is True
+    assert controller.player.state == "PAUSED"
+
+
+def test_pause_when_already_paused(controller):
+    """Verify PAUSE when already paused reports idempotently."""
+    controller.execute("PLAY")
+    controller.execute("PAUSE")
+    res = controller.execute("PAUSE")
+    assert res["success"] is True
+    assert "already paused" in res["status"]
+
+
+def test_pause_when_stopped(controller):
+    """Verify PAUSE when not playing returns controlled failure."""
+    res = controller.execute("PAUSE")
+    assert res["success"] is False
+    assert "No active media playback" in res["status"]
+
+

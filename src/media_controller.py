@@ -2,7 +2,7 @@
 Team 10 Voice Assistant - Media Controller Module
 Component Owner: Hemant Ram Nelapati (T10VA-6 / T10VA-13)
 
-Sprint 1 Day 2 (Oct 20, 2026): PLAY handler with VLC media loading and missing file checks.
+Sprint 1 Day 3 (Oct 21, 2026): PAUSE handler with playback state retention.
 """
 
 from __future__ import annotations
@@ -111,6 +111,7 @@ class MediaController:
 
     SUPPORTED_INTENTS = {
         "PLAY",
+        "PAUSE",
     }
 
     def execute(self, intent: str) -> Dict[str, Any]:
@@ -125,6 +126,7 @@ class MediaController:
 
         handlers = {
             "PLAY": self.play,
+            "PAUSE": self.pause,
         }
 
         handler = handlers.get(normalized_intent)
@@ -195,5 +197,46 @@ class MediaController:
             return {
                 "success": False,
                 "status": "Failed to start media playback.",
+                "error_details": str(exc),
+            }
+
+    def pause(self) -> Dict[str, Any]:
+        """Pause ongoing media playback."""
+        if not self.vlc_available or self.player is None:
+            return {
+                "success": False,
+                "status": "VLC media player is unavailable.",
+                "error_details": "Player instance not initialized or VLC unavailable.",
+            }
+
+        if self._is_paused:
+            return {
+                "success": True,
+                "status": "Playback is already paused.",
+            }
+
+        if not self._has_played_current and not self.is_playing():
+            return {
+                "success": False,
+                "status": "No active media playback to pause.",
+            }
+
+        try:
+            if hasattr(self.player, "set_pause"):
+                self.player.set_pause(1)
+            elif hasattr(self.player, "pause"):
+                self.player.pause()
+
+            self._is_paused = True
+            current_track = self.get_current_track()
+            track_name = os.path.basename(current_track) if current_track else "current media"
+            return {
+                "success": True,
+                "status": f"Paused: {track_name}",
+            }
+        except Exception as exc:
+            return {
+                "success": False,
+                "status": "Failed to pause media playback.",
                 "error_details": str(exc),
             }
