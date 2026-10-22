@@ -2,7 +2,7 @@
 Team 10 Voice Assistant - Media Controller Module
 Component Owner: Hemant Ram Nelapati (T10VA-6 / T10VA-13)
 
-Sprint 2: STOP handler and complete playback halt (VA-F-008).
+Sprint 2: NEXT and PREVIOUS circular playlist navigation (VA-F-009, VA-F-010).
 """
 
 from __future__ import annotations
@@ -114,6 +114,8 @@ class MediaController:
         "PAUSE",
         "RESUME",
         "STOP",
+        "NEXT",
+        "PREVIOUS",
     }
 
     def execute(self, intent: str) -> Dict[str, Any]:
@@ -131,6 +133,8 @@ class MediaController:
             "PAUSE": self.pause,
             "RESUME": self.resume,
             "STOP": self.stop,
+            "NEXT": self.next_track,
+            "PREVIOUS": self.previous_track,
         }
 
         handler = handlers.get(normalized_intent)
@@ -325,6 +329,32 @@ class MediaController:
                 "status": "Failed to stop media playback.",
                 "error_details": str(exc),
             }
+
+    def next_track(self) -> Dict[str, Any]:
+        """Advance to the next track, wrapping around from end to beginning."""
+        if not self._media_files:
+            return {
+                "success": False,
+                "status": "Playlist is empty. Cannot navigate tracks.",
+            }
+
+        # Boundary wrap-around: last -> first
+        self._current_index = (self._current_index + 1) % len(self._media_files)
+        self._is_paused = False
+        return self.play()
+
+    def previous_track(self) -> Dict[str, Any]:
+        """Navigate to the previous track, wrapping around from first to last."""
+        if not self._media_files:
+            return {
+                "success": False,
+                "status": "Playlist is empty. Cannot navigate tracks.",
+            }
+
+        # Boundary wrap-around: first -> last
+        self._current_index = (self._current_index - 1) % len(self._media_files)
+        self._is_paused = False
+        return self.play()
 
     def _apply_audio_settings(self) -> None:
         """Apply current volume and mute settings to the underlying player."""

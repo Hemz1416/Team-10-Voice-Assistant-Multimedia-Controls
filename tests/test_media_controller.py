@@ -190,6 +190,14 @@ def test_empty_playlist_handling():
     assert res_play["success"] is False
     assert "Playlist is empty" in res_play["status"]
 
+    res_next = ctrl.execute("NEXT")
+    assert res_next["success"] is False
+    assert "Playlist is empty" in res_next["status"]
+
+    res_prev = ctrl.execute("PREVIOUS")
+    assert res_prev["success"] is False
+    assert "Playlist is empty" in res_prev["status"]
+
 
 def test_missing_media_file_handling():
     """Verify missing/non-existent media file returns controlled failure."""
@@ -287,7 +295,7 @@ def test_vlc_unavailable_error():
     ctrl.vlc_available = False
     ctrl.player = None
 
-    for cmd in ["PLAY", "PAUSE", "RESUME", "STOP"]:
+    for cmd in ["PLAY", "PAUSE", "RESUME", "STOP", "NEXT", "PREVIOUS"]:
         res = ctrl.execute(cmd)
         assert res["success"] is False
         assert "unavailable" in res["status"]
@@ -345,5 +353,59 @@ def test_stop_runtime_exception_controlled_message(controller):
     assert res["status"] == "Failed to stop media playback."
     assert "Underlying libVLC stop crash" not in res["status"]
     assert "Underlying libVLC stop crash" in res["error_details"]
+
+
+def test_next_track_sequential(controller, mock_files):
+    """Verify NEXT advances to track 2, then track 3."""
+    controller.execute("PLAY")
+    res1 = controller.execute("NEXT")
+    assert res1["success"] is True
+    assert controller.current_index == 1
+    assert "song2.mp3" in res1["status"]
+
+    res2 = controller.execute("NEXT")
+    assert res2["success"] is True
+    assert controller.current_index == 2
+    assert "song3.mp3" in res2["status"]
+
+
+def test_next_track_wraparound_last_to_first(controller, mock_files):
+    """Verify NEXT wraps around from the last track to the first track."""
+    controller.execute("PLAY")
+    controller.execute("NEXT")  # index 1
+    controller.execute("NEXT")  # index 2 (last track)
+    assert controller.current_index == 2
+
+    # Wrap-around from 2 back to 0
+    res = controller.execute("NEXT")
+    assert res["success"] is True
+    assert controller.current_index == 0
+    assert "song1.mp3" in res["status"]
+
+
+def test_previous_track_sequential_backward(controller, mock_files):
+    """Verify PREVIOUS moves backward from track 3 to track 2."""
+    controller.execute("PREVIOUS")  # index 2
+    assert controller.current_index == 2
+
+    res = controller.execute("PREVIOUS")  # index 1
+    assert res["success"] is True
+    assert controller.current_index == 1
+    assert "song2.mp3" in res["status"]
+
+
+# =========================================================================
+# 4. Volume Increment, Decrement, and Limits (Inclusive 0–100%)
+# =========================================================================
+
+
+def test_previous_track_wraparound_first_to_last(controller, mock_files):
+    """Verify PREVIOUS wraps around from the first track (index 0) to the last track."""
+    assert controller.current_index == 0
+    # From index 0, PREVIOUS should wrap to index 2 (len - 1)
+    res = controller.execute("PREVIOUS")
+    assert res["success"] is True
+    assert controller.current_index == 2
+    assert "song3.mp3" in res["status"]
 
 
