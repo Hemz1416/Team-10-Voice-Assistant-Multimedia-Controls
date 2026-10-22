@@ -295,7 +295,7 @@ def test_vlc_unavailable_error():
     ctrl.vlc_available = False
     ctrl.player = None
 
-    for cmd in ["PLAY", "PAUSE", "RESUME", "STOP", "NEXT", "PREVIOUS"]:
+    for cmd in ["PLAY", "PAUSE", "RESUME", "STOP", "NEXT", "PREVIOUS", "VOLUME_UP", "VOLUME_DOWN"]:
         res = ctrl.execute(cmd)
         assert res["success"] is False
         assert "unavailable" in res["status"]
@@ -407,5 +407,133 @@ def test_previous_track_wraparound_first_to_last(controller, mock_files):
     assert res["success"] is True
     assert controller.current_index == 2
     assert "song3.mp3" in res["status"]
+
+
+def test_volume_up_increment(controller):
+    """Verify VOLUME_UP increments volume by 10%."""
+    assert controller.volume == 70
+    res = controller.execute("VOLUME_UP")
+    assert res["success"] is True
+    assert controller.volume == 80
+    assert "Volume increased to 80%" in res["status"]
+    assert controller.player.volume == 80
+
+
+def test_volume_up_clamp_at_100(controller):
+    """Verify VOLUME_UP cannot exceed inclusive 100% maximum."""
+    controller.execute("VOLUME_UP")  # 80
+    controller.execute("VOLUME_UP")  # 90
+    controller.execute("VOLUME_UP")  # 100
+    assert controller.volume == 100
+
+    # Beyond 100 clamp
+    res = controller.execute("VOLUME_UP")
+    assert res["success"] is True
+    assert controller.volume == 100
+    assert "Volume increased to 100%" in res["status"]
+
+
+def test_volume_down_decrement(controller):
+    """Verify VOLUME_DOWN decrements volume by 10%."""
+    assert controller.volume == 70
+    res = controller.execute("VOLUME_DOWN")
+    assert res["success"] is True
+    assert controller.volume == 60
+    assert "Volume decreased to 60%" in res["status"]
+    assert controller.player.volume == 60
+
+
+def test_volume_down_clamp_at_0(controller):
+    """Verify VOLUME_DOWN cannot go below inclusive 0% minimum."""
+    for _ in range(8):
+        controller.execute("VOLUME_DOWN")
+    assert controller.volume == 0
+
+    # Beyond 0 clamp
+    res = controller.execute("VOLUME_DOWN")
+    assert res["success"] is True
+    assert controller.volume == 0
+    assert "Volume decreased to 0%" in res["status"]
+
+
+# =========================================================================
+# 5. MUTE Toggling
+# =========================================================================
+
+
+def test_volume_up_when_vlc_unavailable():
+    """Verify VOLUME_UP returns controlled failure when VLC player is unavailable."""
+    ctrl = MediaController(media_files=["song.mp3"], vlc_instance=None, player=None)
+    ctrl.vlc_available = False
+    ctrl.player = None
+
+    res = ctrl.execute("VOLUME_UP")
+    assert res["success"] is False
+    assert "VLC media player is unavailable" in res["status"]
+    assert "error_details" in res
+    assert ctrl.volume == 70
+
+
+def test_volume_down_when_vlc_unavailable():
+    """Verify VOLUME_DOWN returns controlled failure when VLC player is unavailable."""
+    ctrl = MediaController(media_files=["song.mp3"], vlc_instance=None, player=None)
+    ctrl.vlc_available = False
+    ctrl.player = None
+
+    res = ctrl.execute("VOLUME_DOWN")
+    assert res["success"] is False
+    assert "VLC media player is unavailable" in res["status"]
+    assert "error_details" in res
+    assert ctrl.volume == 70
+
+
+def test_volume_up_when_audio_api_returns_error_code(controller):
+    """Verify VOLUME_UP fails cleanly when player.audio_set_volume returns -1."""
+    controller.player.fail_volume = True
+    initial_volume = controller.volume
+
+    res = controller.execute("VOLUME_UP")
+    assert res["success"] is False
+    assert res["status"] == "Failed to increase volume."
+    assert "error_details" in res
+    assert controller.volume == initial_volume
+
+
+def test_volume_up_when_audio_api_raises_exception(controller):
+    """Verify VOLUME_UP fails cleanly without exposing exception when player raises exception."""
+    controller.player.raise_on_volume = True
+    initial_volume = controller.volume
+
+    res = controller.execute("VOLUME_UP")
+    assert res["success"] is False
+    assert res["status"] == "Failed to increase volume."
+    assert "Hardware mixer communication error" not in res["status"]
+    assert "Hardware mixer communication error" in res["error_details"]
+    assert controller.volume == initial_volume
+
+
+def test_volume_down_when_audio_api_returns_error_code(controller):
+    """Verify VOLUME_DOWN fails cleanly when player.audio_set_volume returns -1."""
+    controller.player.fail_volume = True
+    initial_volume = controller.volume
+
+    res = controller.execute("VOLUME_DOWN")
+    assert res["success"] is False
+    assert res["status"] == "Failed to decrease volume."
+    assert "error_details" in res
+    assert controller.volume == initial_volume
+
+
+def test_volume_down_when_audio_api_raises_exception(controller):
+    """Verify VOLUME_DOWN fails cleanly without exposing exception when player raises exception."""
+    controller.player.raise_on_volume = True
+    initial_volume = controller.volume
+
+    res = controller.execute("VOLUME_DOWN")
+    assert res["success"] is False
+    assert res["status"] == "Failed to decrease volume."
+    assert "Hardware mixer communication error" not in res["status"]
+    assert "Hardware mixer communication error" in res["error_details"]
+    assert controller.volume == initial_volume
 
 

@@ -2,7 +2,7 @@
 Team 10 Voice Assistant - Media Controller Module
 Component Owner: Hemant Ram Nelapati (T10VA-6 / T10VA-13)
 
-Sprint 2: NEXT and PREVIOUS circular playlist navigation (VA-F-009, VA-F-010).
+Sprint 2: VOLUME_UP and VOLUME_DOWN with 0-100% boundary clamping (VA-F-011, VA-F-012).
 """
 
 from __future__ import annotations
@@ -25,6 +25,9 @@ class MediaController:
     Adheres to Team 10 SAD v1.0 and SRS v1.0 specifications.
     Accepts normalized intents and returns structured execution results.
     """
+    VOLUME_STEP = 10
+    MIN_VOLUME = 0
+    MAX_VOLUME = 100
     DEFAULT_VOLUME = 70
 
     def __init__(
@@ -116,6 +119,8 @@ class MediaController:
         "STOP",
         "NEXT",
         "PREVIOUS",
+        "VOLUME_UP",
+        "VOLUME_DOWN",
     }
 
     def execute(self, intent: str) -> Dict[str, Any]:
@@ -135,6 +140,8 @@ class MediaController:
             "STOP": self.stop,
             "NEXT": self.next_track,
             "PREVIOUS": self.previous_track,
+            "VOLUME_UP": self.volume_up,
+            "VOLUME_DOWN": self.volume_down,
         }
 
         handler = handlers.get(normalized_intent)
@@ -356,6 +363,77 @@ class MediaController:
         self._is_paused = False
         return self.play()
 
+    def _set_player_volume(self, target_volume: int) -> Tuple[bool, Optional[str]]:
+        """Attempt to set volume on the player. Returns (success, error_detail)."""
+        if not self.vlc_available or self.player is None:
+            return False, "Player instance not initialized or VLC unavailable."
+
+        if hasattr(self.player, "audio_set_volume"):
+            try:
+                ret = self.player.audio_set_volume(target_volume)
+                # In libvlc C API, audio_set_volume returns 0 on success, -1 on failure
+                if ret == -1:
+                    return False, "Underlying audio engine rejected volume setting (returned -1)."
+            except Exception as exc:
+                return False, f"Exception in audio_set_volume: {str(exc)}"
+        return True, None
+
+    def volume_up(self, step: Optional[int] = None) -> Dict[str, Any]:
+        """Increase volume by step (default 10), clamped within inclusive 0–100%."""
+        if not self.vlc_available or self.player is None:
+            return {
+                "success": False,
+                "status": "VLC media player is unavailable.",
+                "error_details": "Player instance not initialized or VLC unavailable.",
+            }
+
+        increment = step if step is not None else self.VOLUME_STEP
+        target_volume = min(self.MAX_VOLUME, self._volume + increment)
+
+        ok, err = self._set_player_volume(target_volume)
+        if not ok:
+            return {
+                "success": False,
+                "status": "Failed to increase volume.",
+                "error_details": err,
+            }
+
+        self._volume = target_volume
+        return {
+            "success": True,
+            "status": f"Volume increased to {self._volume}%",
+            "volume": self._volume,
+        }
+
+    def volume_down(self, step: Optional[int] = None) -> Dict[str, Any]:
+        """Decrease volume by step (default 10), clamped within inclusive 0–100%."""
+        if not self.vlc_available or self.player is None:
+            return {
+                "success": False,
+                "status": "VLC media player is unavailable.",
+                "error_details": "Player instance not initialized or VLC unavailable.",
+            }
+
+        decrement = step if step is not None else self.VOLUME_STEP
+        target_volume = max(self.MIN_VOLUME, self._volume - decrement)
+
+        ok, err = self._set_player_volume(target_volume)
+        if not ok:
+            return {
+                "success": False,
+                "status": "Failed to decrease volume.",
+                "error_details": err,
+            }
+
+        self._volume = target_volume
+        return {
+            "success": True,
+            "status": f"Volume decreased to {self._volume}%",
+            "volume": self._volume,
+        }
+
     def _apply_audio_settings(self) -> None:
-        """Apply current volume and mute settings to the underlying player."""
-        pass
+        """Apply current volume setting to the underlying player."""
+        if not self.vlc_available or self.player is None:
+            return
+        self._set_player_volume(self._volume)
