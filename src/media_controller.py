@@ -2,7 +2,7 @@
 Team 10 Voice Assistant - Media Controller Module
 Component Owner: Hemant Ram Nelapati (T10VA-6 / T10VA-13)
 
-Sprint 1: Exception shielding, state recovery (VA-F-018), and VLC error handling.
+Sprint 2: STOP handler and complete playback halt (VA-F-008).
 """
 
 from __future__ import annotations
@@ -113,6 +113,7 @@ class MediaController:
         "PLAY",
         "PAUSE",
         "RESUME",
+        "STOP",
     }
 
     def execute(self, intent: str) -> Dict[str, Any]:
@@ -129,6 +130,7 @@ class MediaController:
             "PLAY": self.play,
             "PAUSE": self.pause,
             "RESUME": self.resume,
+            "STOP": self.stop,
         }
 
         handler = handlers.get(normalized_intent)
@@ -297,6 +299,32 @@ class MediaController:
 
         # If not paused, start playback
         return self.play()
+
+    def stop(self) -> Dict[str, Any]:
+        """Stop playback completely."""
+        if not self.vlc_available or self.player is None:
+            return {
+                "success": False,
+                "status": "VLC media player is unavailable.",
+                "error_details": "Player instance not initialized or VLC unavailable.",
+            }
+
+        try:
+            if hasattr(self.player, "stop"):
+                self.player.stop()
+
+            self._is_paused = False
+            self._has_played_current = False
+            return {
+                "success": True,
+                "status": "Playback stopped.",
+            }
+        except Exception as exc:
+            return {
+                "success": False,
+                "status": "Failed to stop media playback.",
+                "error_details": str(exc),
+            }
 
     def _apply_audio_settings(self) -> None:
         """Apply current volume and mute settings to the underlying player."""

@@ -287,7 +287,7 @@ def test_vlc_unavailable_error():
     ctrl.vlc_available = False
     ctrl.player = None
 
-    for cmd in ["PLAY", "PAUSE", "RESUME"]:
+    for cmd in ["PLAY", "PAUSE", "RESUME", "STOP"]:
         res = ctrl.execute(cmd)
         assert res["success"] is False
         assert "unavailable" in res["status"]
@@ -322,5 +322,28 @@ def test_resume_runtime_exception_controlled_message(controller):
     assert res["status"] == "Failed to resume media playback."
     assert "Underlying libVLC pause crash" not in res["status"]
     assert "Underlying libVLC pause crash" in res["error_details"]
+
+
+def test_stop_playback(controller):
+    """Verify STOP halts playback and clears paused state."""
+    controller.execute("PLAY")
+    controller.execute("PAUSE")
+    res = controller.execute("STOP")
+    assert res["success"] is True
+    assert "Playback stopped." in res["status"]
+    assert controller.player.state == "STOPPED"
+    assert controller.is_paused() is False
+
+
+def test_stop_runtime_exception_controlled_message(controller):
+    """Verify STOP failure does not expose raw exception text in user status."""
+    controller.execute("PLAY")
+    controller.player.raise_on_stop = True
+
+    res = controller.execute("STOP")
+    assert res["success"] is False
+    assert res["status"] == "Failed to stop media playback."
+    assert "Underlying libVLC stop crash" not in res["status"]
+    assert "Underlying libVLC stop crash" in res["error_details"]
 
 
