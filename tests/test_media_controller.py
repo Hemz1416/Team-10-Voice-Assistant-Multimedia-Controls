@@ -262,3 +262,65 @@ def test_resume_when_unstarted(controller):
 # =========================================================================
 
 
+def test_vlc_player_failure_code(controller):
+    """Verify player.play() returning -1 is reported cleanly."""
+    controller.player.fail_play = True
+    res = controller.execute("PLAY")
+    assert res["success"] is False
+    assert "Failed to start playback" in res["status"]
+    assert "error_details" in res
+
+
+def test_vlc_player_runtime_exception(controller):
+    """Verify underlying player exception is caught, returns controlled status, and preserves diagnostics."""
+    controller.player.raise_on_play = True
+    res = controller.execute("PLAY")
+    assert res["success"] is False
+    assert res["status"] == "Failed to start media playback."
+    assert "Underlying libVLC fatal crash" not in res["status"]
+    assert "Underlying libVLC fatal crash" in res["error_details"]
+
+
+def test_vlc_unavailable_error():
+    """Verify behavior for all commands when VLC is not available."""
+    ctrl = MediaController(media_files=["dummy.mp3"], vlc_instance=None, player=None)
+    ctrl.vlc_available = False
+    ctrl.player = None
+
+    for cmd in ["PLAY", "PAUSE", "RESUME"]:
+        res = ctrl.execute(cmd)
+        assert res["success"] is False
+        assert "unavailable" in res["status"]
+        assert "error_details" in res
+
+
+# =========================================================================
+# 7. Focused Failure Tests: Volume & Mute Failures (VLC Unavailable & API Errors)
+# =========================================================================
+
+
+def test_pause_runtime_exception_controlled_message(controller):
+    """Verify PAUSE failure does not expose raw exception text in user status."""
+    controller.execute("PLAY")
+    controller.player.raise_on_pause = True
+
+    res = controller.execute("PAUSE")
+    assert res["success"] is False
+    assert res["status"] == "Failed to pause media playback."
+    assert "Underlying libVLC pause crash" not in res["status"]
+    assert "Underlying libVLC pause crash" in res["error_details"]
+
+
+def test_resume_runtime_exception_controlled_message(controller):
+    """Verify RESUME failure does not expose raw exception text in user status."""
+    controller.execute("PLAY")
+    controller.execute("PAUSE")
+    controller.player.raise_on_pause = True
+
+    res = controller.execute("RESUME")
+    assert res["success"] is False
+    assert res["status"] == "Failed to resume media playback."
+    assert "Underlying libVLC pause crash" not in res["status"]
+    assert "Underlying libVLC pause crash" in res["error_details"]
+
+

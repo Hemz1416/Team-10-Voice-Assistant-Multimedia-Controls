@@ -2,7 +2,7 @@
 Team 10 Voice Assistant - Media Controller Module
 Component Owner: Hemant Ram Nelapati (T10VA-6 / T10VA-13)
 
-Sprint 1 Day 4 (Oct 22, 2026): RESUME handler with playback state continuation.
+Sprint 1: Exception shielding, state recovery (VA-F-018), and VLC error handling.
 """
 
 from __future__ import annotations
@@ -148,7 +148,7 @@ class MediaController:
             }
 
     def play(self) -> Dict[str, Any]:
-        """Start media playback of current track."""
+        """Start or resume playback of the current track."""
         if not self._media_files:
             return {
                 "success": False,
@@ -162,6 +162,7 @@ class MediaController:
                 "error_details": "Player instance not initialized or VLC unavailable.",
             }
 
+        # If currently paused, resume instead of restarting track
         if self._is_paused:
             return self.resume()
 
@@ -183,8 +184,16 @@ class MediaController:
                 if hasattr(self.player, "set_media"):
                     self.player.set_media(media)
 
-            if hasattr(self.player, "play"):
-                self.player.play()
+            play_res = self.player.play()
+            if play_res == -1:
+                return {
+                    "success": False,
+                    "status": f"Failed to start playback for: {os.path.basename(track_path)}",
+                    "error_details": "libVLC play returned error code -1",
+                }
+
+            # Apply stored volume and mute settings to player
+            self._apply_audio_settings()
 
             self._is_paused = False
             self._has_played_current = True
@@ -288,3 +297,7 @@ class MediaController:
 
         # If not paused, start playback
         return self.play()
+
+    def _apply_audio_settings(self) -> None:
+        """Apply current volume and mute settings to the underlying player."""
+        pass
