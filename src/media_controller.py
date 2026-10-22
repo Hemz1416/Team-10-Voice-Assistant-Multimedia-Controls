@@ -2,7 +2,7 @@
 Team 10 Voice Assistant - Media Controller Module
 Component Owner: Hemant Ram Nelapati (T10VA-6 / T10VA-13)
 
-Sprint 2: VOLUME_UP and VOLUME_DOWN with 0-100% boundary clamping (VA-F-011, VA-F-012).
+Sprint 2: MUTE command, state synchronization, and OS isolation (VA-F-013, VA-SR-004).
 """
 
 from __future__ import annotations
@@ -121,6 +121,7 @@ class MediaController:
         "PREVIOUS",
         "VOLUME_UP",
         "VOLUME_DOWN",
+        "MUTE",
     }
 
     def execute(self, intent: str) -> Dict[str, Any]:
@@ -142,6 +143,7 @@ class MediaController:
             "PREVIOUS": self.previous_track,
             "VOLUME_UP": self.volume_up,
             "VOLUME_DOWN": self.volume_down,
+            "MUTE": self.toggle_mute,
         }
 
         handler = handlers.get(normalized_intent)
@@ -432,8 +434,49 @@ class MediaController:
             "volume": self._volume,
         }
 
+    def _set_player_mute(self, target_mute: bool) -> Tuple[bool, Optional[str]]:
+        """Attempt to set mute on the player. Returns (success, error_detail)."""
+        if not self.vlc_available or self.player is None:
+            return False, "Player instance not initialized or VLC unavailable."
+
+        if hasattr(self.player, "audio_set_mute"):
+            try:
+                ret = self.player.audio_set_mute(target_mute)
+                if ret == -1:
+                    return False, "Underlying audio engine rejected mute toggle (returned -1)."
+            except Exception as exc:
+                return False, f"Exception in audio_set_mute: {str(exc)}"
+        return True, None
+
+    def toggle_mute(self) -> Dict[str, Any]:
+        """Toggle mute state predictably."""
+        if not self.vlc_available or self.player is None:
+            return {
+                "success": False,
+                "status": "VLC media player is unavailable.",
+                "error_details": "Player instance not initialized or VLC unavailable.",
+            }
+
+        target_mute = not self._is_muted
+        ok, err = self._set_player_mute(target_mute)
+        if not ok:
+            return {
+                "success": False,
+                "status": "Failed to toggle audio mute.",
+                "error_details": err,
+            }
+
+        self._is_muted = target_mute
+        state_str = "Audio muted." if self._is_muted else "Audio unmuted."
+        return {
+            "success": True,
+            "status": state_str,
+            "is_muted": self._is_muted,
+        }
+
     def _apply_audio_settings(self) -> None:
-        """Apply current volume setting to the underlying player."""
+        """Apply current volume and mute settings to the underlying player."""
         if not self.vlc_available or self.player is None:
             return
         self._set_player_volume(self._volume)
+        self._set_player_mute(self._is_muted)

@@ -295,7 +295,7 @@ def test_vlc_unavailable_error():
     ctrl.vlc_available = False
     ctrl.player = None
 
-    for cmd in ["PLAY", "PAUSE", "RESUME", "STOP", "NEXT", "PREVIOUS", "VOLUME_UP", "VOLUME_DOWN"]:
+    for cmd in ["PLAY", "PAUSE", "RESUME", "STOP", "VOLUME_UP", "VOLUME_DOWN", "MUTE"]:
         res = ctrl.execute(cmd)
         assert res["success"] is False
         assert "unavailable" in res["status"]
@@ -535,5 +535,72 @@ def test_volume_down_when_audio_api_raises_exception(controller):
     assert "Hardware mixer communication error" not in res["status"]
     assert "Hardware mixer communication error" in res["error_details"]
     assert controller.volume == initial_volume
+
+
+def test_mute_toggle_on_and_off(controller):
+    """Verify MUTE predictably toggles mute state between True and False."""
+    assert controller.is_muted is False
+
+    # First toggle: Mute ON
+    res1 = controller.execute("MUTE")
+    assert res1["success"] is True
+    assert controller.is_muted is True
+    assert "Audio muted." in res1["status"]
+    assert controller.player.muted is True
+
+    # Second toggle: Mute OFF
+    res2 = controller.execute("MUTE")
+    assert res2["success"] is True
+    assert controller.is_muted is False
+    assert "Audio unmuted." in res2["status"]
+    assert controller.player.muted is False
+
+
+# =========================================================================
+# 6. Edge Cases, Empty Playlist, Missing Files, and Error Handling
+# =========================================================================
+
+
+def test_mute_when_vlc_unavailable():
+    """Verify MUTE returns controlled failure when VLC player is unavailable."""
+    ctrl = MediaController(media_files=["song.mp3"], vlc_instance=None, player=None)
+    ctrl.vlc_available = False
+    ctrl.player = None
+
+    res = ctrl.execute("MUTE")
+    assert res["success"] is False
+    assert "VLC media player is unavailable" in res["status"]
+    assert "error_details" in res
+    assert ctrl.is_muted is False
+
+
+def test_mute_when_audio_api_returns_error_code(controller):
+    """Verify MUTE fails cleanly when player.audio_set_mute returns -1."""
+    controller.player.fail_mute = True
+    initial_mute = controller.is_muted
+
+    res = controller.execute("MUTE")
+    assert res["success"] is False
+    assert res["status"] == "Failed to toggle audio mute."
+    assert "error_details" in res
+    assert controller.is_muted == initial_mute
+
+
+def test_mute_when_audio_api_raises_exception(controller):
+    """Verify MUTE fails cleanly without exposing exception when player raises exception."""
+    controller.player.raise_on_mute = True
+    initial_mute = controller.is_muted
+
+    res = controller.execute("MUTE")
+    assert res["success"] is False
+    assert res["status"] == "Failed to toggle audio mute."
+    assert "Hardware mute line disconnected" not in res["status"]
+    assert "Hardware mute line disconnected" in res["error_details"]
+    assert controller.is_muted == initial_mute
+
+
+# =========================================================================
+# 8. Controlled Error Messages: No Raw Exception Details in User Status
+# =========================================================================
 
 
