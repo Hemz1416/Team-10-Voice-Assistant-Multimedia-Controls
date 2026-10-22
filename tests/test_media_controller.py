@@ -229,3 +229,36 @@ def test_pause_when_stopped(controller):
     assert "No active media playback" in res["status"]
 
 
+def test_resume_from_paused(controller):
+    """Verify RESUME unpauses paused media."""
+    controller.execute("PLAY")
+    controller.execute("PAUSE")
+    assert controller.is_paused() is True
+
+    res = controller.execute("RESUME")
+    assert res["success"] is True
+    assert "Resumed playback: song1.mp3" in res["status"]
+    assert controller.is_paused() is False
+    assert controller.player.state == "PLAYING"
+
+
+def test_resume_when_already_playing(controller):
+    """Verify RESUME when actively playing returns success with status."""
+    controller.execute("PLAY")
+    res = controller.execute("RESUME")
+    assert res["success"] is True
+    assert "Playback already in progress" in res["status"]
+
+
+def test_resume_when_unstarted(controller):
+    """Verify RESUME when not yet playing starts playback of track 1."""
+    res = controller.execute("RESUME")
+    assert res["success"] is True
+    assert "Playing track 1" in res["status"]
+
+
+# =========================================================================
+# 3. STOP, NEXT, PREVIOUS and Playlist Boundary Wrap-Around
+# =========================================================================
+
+

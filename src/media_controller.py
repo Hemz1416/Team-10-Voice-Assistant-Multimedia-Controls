@@ -2,7 +2,7 @@
 Team 10 Voice Assistant - Media Controller Module
 Component Owner: Hemant Ram Nelapati (T10VA-6 / T10VA-13)
 
-Sprint 1 Day 3 (Oct 21, 2026): PAUSE handler with playback state retention.
+Sprint 1 Day 4 (Oct 22, 2026): RESUME handler with playback state continuation.
 """
 
 from __future__ import annotations
@@ -112,6 +112,7 @@ class MediaController:
     SUPPORTED_INTENTS = {
         "PLAY",
         "PAUSE",
+        "RESUME",
     }
 
     def execute(self, intent: str) -> Dict[str, Any]:
@@ -127,6 +128,7 @@ class MediaController:
         handlers = {
             "PLAY": self.play,
             "PAUSE": self.pause,
+            "RESUME": self.resume,
         }
 
         handler = handlers.get(normalized_intent)
@@ -240,3 +242,49 @@ class MediaController:
                 "status": "Failed to pause media playback.",
                 "error_details": str(exc),
             }
+
+    def resume(self) -> Dict[str, Any]:
+        """Resume playback if paused, or start if stopped."""
+        if not self.vlc_available or self.player is None:
+            return {
+                "success": False,
+                "status": "VLC media player is unavailable.",
+                "error_details": "Player instance not initialized or VLC unavailable.",
+            }
+
+        if not self._media_files:
+            return {
+                "success": False,
+                "status": "Playlist is empty. No media to resume.",
+            }
+
+        # If already actively playing and not paused
+        if self.is_playing() and not self._is_paused:
+            return {
+                "success": True,
+                "status": "Playback already in progress.",
+            }
+
+        if self._is_paused:
+            try:
+                if hasattr(self.player, "set_pause"):
+                    self.player.set_pause(0)
+                elif hasattr(self.player, "play"):
+                    self.player.play()
+
+                self._is_paused = False
+                current_track = self.get_current_track()
+                track_name = os.path.basename(current_track) if current_track else "current media"
+                return {
+                    "success": True,
+                    "status": f"Resumed playback: {track_name}",
+                }
+            except Exception as exc:
+                return {
+                    "success": False,
+                    "status": "Failed to resume media playback.",
+                    "error_details": str(exc),
+                }
+
+        # If not paused, start playback
+        return self.play()
