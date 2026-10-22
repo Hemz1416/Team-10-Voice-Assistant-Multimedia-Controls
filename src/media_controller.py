@@ -1,8 +1,9 @@
 """
 Team 10 Voice Assistant - Media Controller Module
-Component Owner: Hemant Ram Nelapati (T10VA-6 / T10VA-13)
+Component Owner: Hemant Ram Nelapati (T10VA-6)
 
-Sprint 2: MUTE command, state synchronization, and OS isolation (VA-F-013, VA-SR-004).
+Provides VLC-backed media playback control for 9 normalized intents:
+PLAY, PAUSE, RESUME, STOP, NEXT, PREVIOUS, VOLUME_UP, VOLUME_DOWN, MUTE.
 """
 
 from __future__ import annotations
@@ -25,10 +26,23 @@ class MediaController:
     Adheres to Team 10 SAD v1.0 and SRS v1.0 specifications.
     Accepts normalized intents and returns structured execution results.
     """
+
     VOLUME_STEP = 10
     MIN_VOLUME = 0
     MAX_VOLUME = 100
     DEFAULT_VOLUME = 70
+
+    SUPPORTED_INTENTS = {
+        "PLAY",
+        "PAUSE",
+        "RESUME",
+        "STOP",
+        "NEXT",
+        "PREVIOUS",
+        "VOLUME_UP",
+        "VOLUME_DOWN",
+        "MUTE",
+    }
 
     def __init__(
         self,
@@ -36,7 +50,13 @@ class MediaController:
         vlc_instance: Optional[Any] = None,
         player: Optional[Any] = None,
     ) -> None:
-        """Initialize the media controller with a playlist and VLC player."""
+        """Initialize the media controller with a playlist and VLC player.
+
+        Args:
+            media_files: Sequence of media file paths.
+            vlc_instance: Optional injected VLC instance (for mocking/testing).
+            player: Optional injected VLC media player (for mocking/testing).
+        """
         self._media_files: List[str] = [str(f) for f in media_files] if media_files else []
         self._current_index: int = 0
         self._volume: int = self.DEFAULT_VOLUME
@@ -91,41 +111,22 @@ class MediaController:
         """Return mute state."""
         return self._is_muted
 
-    def is_paused(self) -> bool:
-        """Return True if currently in paused state."""
-        return self._is_paused
-
-    def is_playing(self) -> bool:
-        """Check if VLC is actively playing."""
-        if not self.vlc_available or self.player is None:
-            return False
-        try:
-            if hasattr(self.player, "is_playing"):
-                return bool(self.player.is_playing())
-            return False
-        except Exception:
-            return False
-
     def get_current_track(self) -> Optional[str]:
         """Return path of current track if playlist is non-empty."""
         if 0 <= self._current_index < len(self._media_files):
             return self._media_files[self._current_index]
         return None
 
-    SUPPORTED_INTENTS = {
-        "PLAY",
-        "PAUSE",
-        "RESUME",
-        "STOP",
-        "NEXT",
-        "PREVIOUS",
-        "VOLUME_UP",
-        "VOLUME_DOWN",
-        "MUTE",
-    }
-
     def execute(self, intent: str) -> Dict[str, Any]:
-        """Execute a normalized multimedia intent."""
+        """Execute a normalized multimedia intent.
+
+        Args:
+            intent: String representing the multimedia action.
+
+        Returns:
+            Dict containing at minimum 'success' (bool) and 'status' (str),
+            plus optional developer diagnostics ('error_details') on failure.
+        """
         if not intent or not isinstance(intent, str):
             return {
                 "success": False,
@@ -380,6 +381,20 @@ class MediaController:
                 return False, f"Exception in audio_set_volume: {str(exc)}"
         return True, None
 
+    def _set_player_mute(self, target_mute: bool) -> Tuple[bool, Optional[str]]:
+        """Attempt to set mute on the player. Returns (success, error_detail)."""
+        if not self.vlc_available or self.player is None:
+            return False, "Player instance not initialized or VLC unavailable."
+
+        if hasattr(self.player, "audio_set_mute"):
+            try:
+                ret = self.player.audio_set_mute(target_mute)
+                if ret == -1:
+                    return False, "Underlying audio engine rejected mute toggle (returned -1)."
+            except Exception as exc:
+                return False, f"Exception in audio_set_mute: {str(exc)}"
+        return True, None
+
     def volume_up(self, step: Optional[int] = None) -> Dict[str, Any]:
         """Increase volume by step (default 10), clamped within inclusive 0–100%."""
         if not self.vlc_available or self.player is None:
@@ -434,20 +449,6 @@ class MediaController:
             "volume": self._volume,
         }
 
-    def _set_player_mute(self, target_mute: bool) -> Tuple[bool, Optional[str]]:
-        """Attempt to set mute on the player. Returns (success, error_detail)."""
-        if not self.vlc_available or self.player is None:
-            return False, "Player instance not initialized or VLC unavailable."
-
-        if hasattr(self.player, "audio_set_mute"):
-            try:
-                ret = self.player.audio_set_mute(target_mute)
-                if ret == -1:
-                    return False, "Underlying audio engine rejected mute toggle (returned -1)."
-            except Exception as exc:
-                return False, f"Exception in audio_set_mute: {str(exc)}"
-        return True, None
-
     def toggle_mute(self) -> Dict[str, Any]:
         """Toggle mute state predictably."""
         if not self.vlc_available or self.player is None:
@@ -473,6 +474,21 @@ class MediaController:
             "status": state_str,
             "is_muted": self._is_muted,
         }
+
+    def is_playing(self) -> bool:
+        """Check if VLC is actively playing."""
+        if not self.vlc_available or self.player is None:
+            return False
+        try:
+            if hasattr(self.player, "is_playing"):
+                return bool(self.player.is_playing())
+            return False
+        except Exception:
+            return False
+
+    def is_paused(self) -> bool:
+        """Return True if currently in paused state."""
+        return self._is_paused
 
     def _apply_audio_settings(self) -> None:
         """Apply current volume and mute settings to the underlying player."""

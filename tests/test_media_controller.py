@@ -604,3 +604,13 @@ def test_mute_when_audio_api_raises_exception(controller):
 # =========================================================================
 
 
+def test_no_raw_exception_exposed_in_user_facing_status(controller):
+    """Verify that simulated internal errors never leak exception details to user status."""
+    controller.player.raise_on_play = True
+    res = controller.execute("PLAY")
+    assert res["success"] is False
+    assert "RuntimeError" not in res["status"]
+    assert "crash" not in res["status"]
+    assert "error_details" in res
+
+
