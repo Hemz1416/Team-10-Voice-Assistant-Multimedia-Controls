@@ -1,3 +1,5 @@
-# Hemant-owned dependencies for T10VA-5 (Audio/VLC Environment) and T10VA-6 (Media Controller)
-python-vlc>=3.0.20123
+# Core integration foundation uses Python standard-library modules.
 pytest>=7.0.0
+
+# Multimedia and audio controller dependencies (T10VA-5, T10VA-6)
+python-vlc>=3.0.20123
