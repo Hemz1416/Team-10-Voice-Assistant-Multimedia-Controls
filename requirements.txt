@@ -1,2 +1,4 @@
-# Core integration foundation uses Python standard-library modules.
 pytest>=7.0.0
+vosk
+sounddevice
+python-vlc

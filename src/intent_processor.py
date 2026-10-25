@@ -40,6 +40,16 @@ PHRASE_MAP = {
     "decrease volume": "VOLUME_DOWN",
     "mute": "MUTE",
     "mute audio": "MUTE",
+    "play music": "PLAY",
+    "start playing": "PLAY",
+    "pause music": "PAUSE",
+    "please pause": "PAUSE",
+    "resume music": "RESUME",
+    "continue playing": "RESUME",
+    "stop music": "STOP",
+    "turn volume up": "VOLUME_UP",
+    "turn volume down": "VOLUME_DOWN",
+    "mute the sound": "MUTE",
 }
 
 
