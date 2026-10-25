@@ -1,0 +1,4 @@
+vosk
+sounddevice
+python-vlc
+pytest
