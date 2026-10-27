@@ -17,7 +17,9 @@ class TestCommandValidator(unittest.TestCase):
         self.assertEqual(result.reason, "low_confidence")
 
     def test_unknown_intent_is_rejected(self):
-        result = validate_command(IntentResult("DELETE_FILES", {}), 0.99)
+        result = validate_command(
+            IntentResult("DELETE_FILES", {}), 0.99
+        )
         self.assertFalse(result.allowed)
         self.assertEqual(result.reason, "unsupported_intent")
 
@@ -37,9 +39,7 @@ class TestCommandValidator(unittest.TestCase):
             minimum_confidence=-0.1,
         )
         self.assertFalse(result.allowed)
-        self.assertEqual(
-            result.reason, "invalid_minimum_confidence"
-        )
+        self.assertEqual(result.reason, "invalid_minimum_confidence")
 
     def test_minimum_confidence_above_one_is_rejected(self):
         result = validate_command(
@@ -48,9 +48,7 @@ class TestCommandValidator(unittest.TestCase):
             minimum_confidence=1.1,
         )
         self.assertFalse(result.allowed)
-        self.assertEqual(
-            result.reason, "invalid_minimum_confidence"
-        )
+        self.assertEqual(result.reason, "invalid_minimum_confidence")
 
     def test_nan_minimum_confidence_is_rejected(self):
         result = validate_command(
@@ -59,9 +57,7 @@ class TestCommandValidator(unittest.TestCase):
             minimum_confidence=float("nan"),
         )
         self.assertFalse(result.allowed)
-        self.assertEqual(
-            result.reason, "invalid_minimum_confidence"
-        )
+        self.assertEqual(result.reason, "invalid_minimum_confidence")
 
     def test_nan_confidence_is_rejected(self):
         result = validate_command(

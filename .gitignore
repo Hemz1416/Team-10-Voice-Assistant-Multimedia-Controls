@@ -1,8 +1,18 @@
+# Python virtual environments
+venv/
+.venv/
 
+# Python cache files
 __pycache__/
 *.py[cod]
 .pytest_cache/
-.venv/
-venv/
-.coverage
+
+# Environment variables and secrets
 .env
+
+# Local speech models and logs
+models/
+logs/
+
+# Test coverage output
+.coverage
