@@ -8,7 +8,9 @@ class TestIntentProcessor(unittest.TestCase):
     def test_supported_commands(self):
         cases = {
             "play": "PLAY",
+            "play music": "PLAY",
             "pause": "PAUSE",
+            "please pause": "PAUSE",
             "resume playback": "RESUME",
             "stop": "STOP",
             "next song": "NEXT",
@@ -23,9 +25,13 @@ class TestIntentProcessor(unittest.TestCase):
                 self.assertEqual(detect_intent(phrase).intent, expected)
 
     def test_case_and_whitespace(self):
-        self.assertEqual(detect_intent("  PLAY  ").intent, "PLAY")
+        self.assertEqual(
+            detect_intent("  PLAY MUSIC  ").intent,
+            "PLAY",
+        )
 
     def test_unsupported_command(self):
+        self.assertIsNone(detect_intent("tell me a joke").intent)
         self.assertIsNone(detect_intent("open a browser").intent)
 
     def test_empty_input(self):
