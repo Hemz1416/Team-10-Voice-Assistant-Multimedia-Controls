@@ -30,6 +30,55 @@ class TestCommandValidator(unittest.TestCase):
         self.assertFalse(result.allowed)
         self.assertEqual(result.reason, "invalid_confidence")
 
+    def test_negative_minimum_confidence_is_rejected(self):
+        result = validate_command(
+            IntentResult("PLAY", {}),
+            0.95,
+            minimum_confidence=-0.1,
+        )
+        self.assertFalse(result.allowed)
+        self.assertEqual(
+            result.reason, "invalid_minimum_confidence"
+        )
+
+    def test_minimum_confidence_above_one_is_rejected(self):
+        result = validate_command(
+            IntentResult("PLAY", {}),
+            0.95,
+            minimum_confidence=1.1,
+        )
+        self.assertFalse(result.allowed)
+        self.assertEqual(
+            result.reason, "invalid_minimum_confidence"
+        )
+
+    def test_nan_minimum_confidence_is_rejected(self):
+        result = validate_command(
+            IntentResult("PLAY", {}),
+            0.95,
+            minimum_confidence=float("nan"),
+        )
+        self.assertFalse(result.allowed)
+        self.assertEqual(
+            result.reason, "invalid_minimum_confidence"
+        )
+
+    def test_nan_confidence_is_rejected(self):
+        result = validate_command(
+            IntentResult("PLAY", {}),
+            float("nan"),
+        )
+        self.assertFalse(result.allowed)
+        self.assertEqual(result.reason, "invalid_confidence")
+
+    def test_malformed_intent_is_rejected(self):
+        result = validate_command(
+            IntentResult(["PLAY"], {}),
+            0.95,
+        )
+        self.assertFalse(result.allowed)
+        self.assertEqual(result.reason, "invalid_intent")
+
 
 if __name__ == "__main__":
     unittest.main()
