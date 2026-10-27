@@ -1,73 +1,120 @@
 
+"""Map recognized text to predefined multimedia intents."""
+
 import re
 
+from src.models import IntentResult
 
-COMMAND_PHRASES = {
-    "PLAY": [
-        "play",
-        "play music",
-        "start playing",
-    ],
-    "PAUSE": [
-        "pause",
-        "pause music",
-        "please pause",
-    ],
-    "RESUME": [
-        "resume",
-        "resume music",
-        "continue playing",
-    ],
-    "STOP": [
-        "stop",
-        "stop music",
-    ],
-    "NEXT": [
-        "next",
-        "next track",
-        "next song",
-    ],
-    "PREVIOUS": [
-        "previous",
-        "previous track",
-        "previous song",
-    ],
-    "VOLUME_UP": [
-        "volume up",
-        "increase volume",
-        "turn volume up",
-    ],
-    "VOLUME_DOWN": [
-        "volume down",
-        "decrease volume",
-        "turn volume down",
-    ],
-    "MUTE": [
-        "mute",
-        "mute audio",
-        "mute the sound",
-    ],
+
+SUPPORTED_INTENTS = {
+    "PLAY",
+    "PAUSE",
+    "RESUME",
+    "STOP",
+    "NEXT",
+    "PREVIOUS",
+    "VOLUME_UP",
+    "VOLUME_DOWN",
+    "MUTE",
 }
+
+PHRASE_MAP = {
+    # Play
+    "play": "PLAY",
+    "play music": "PLAY",
+    "start playing": "PLAY",
+    "start playback": "PLAY",
+    "start music": "PLAY",
+
+    # Pause
+    "pause": "PAUSE",
+    "pause playback": "PAUSE",
+    "pause music": "PAUSE",
+
+    # Resume
+    "resume": "RESUME",
+    "resume playback": "RESUME",
+    "continue playback": "RESUME",
+    "resume music": "RESUME",
+    "continue playing": "RESUME",
+
+    # Stop
+    "stop": "STOP",
+    "stop playback": "STOP",
+    "stop music": "STOP",
+
+    # Next and previous
+    "next": "NEXT",
+    "next track": "NEXT",
+    "next song": "NEXT",
+    "previous": "PREVIOUS",
+    "previous track": "PREVIOUS",
+    "previous song": "PREVIOUS",
+
+    # Volume
+    "volume up": "VOLUME_UP",
+    "increase volume": "VOLUME_UP",
+    "turn volume up": "VOLUME_UP",
+    "turn the volume up": "VOLUME_UP",
+    "volume down": "VOLUME_DOWN",
+    "decrease volume": "VOLUME_DOWN",
+    "turn volume down": "VOLUME_DOWN",
+    "turn the volume down": "VOLUME_DOWN",
+
+    # Mute
+    "mute": "MUTE",
+    "mute audio": "MUTE",
+    "mute the sound": "MUTE",
+}
+
+POLITE_PREFIXES = (
+    "could you please ",
+    "would you please ",
+    "can you please ",
+    "will you please ",
+    "could you ",
+    "would you ",
+    "can you ",
+    "will you ",
+    "please ",
+    "hey assistant ",
+)
 
 
 def normalize_text(text):
-    text = text.lower().strip()
-    return re.sub(r"\s+", " ", text)
+    """Normalize text for consistent phrase matching."""
+    if not isinstance(text, str):
+        return ""
+
+    text = re.sub(r"[^a-z0-9\s]", " ", text.lower())
+    return " ".join(text.split())
 
 
-def detect_intent(text, confidence=None):
-    phrase = normalize_text(text or "")
+def detect_intent(text: str) -> IntentResult:
+    """Return a structured intent result or an empty result."""
+    phrase = normalize_text(text)
 
-    for intent, phrases in COMMAND_PHRASES.items():
-        if phrase in phrases:
-            return {
-                "intent": intent,
-                "confidence": confidence,
-                "recognized_text": phrase,
-            }
+    if not phrase:
+        return IntentResult(intent=None, parameters={})
 
-    return {
-        "intent": None,
-        "confidence": confidence,
-        "recognized_text": phrase,
-    }
+    # Remove polite introductions without removing arbitrary words.
+    changed = True
+    while changed:
+        changed = False
+
+        for prefix in POLITE_PREFIXES:
+            if phrase.startswith(prefix):
+                phrase = phrase[len(prefix):].strip()
+                changed = True
+                break
+
+    # Also support a polite suffix.
+    if phrase.endswith(" please"):
+        phrase = phrase[:-7].strip()
+
+    intent = PHRASE_MAP.get(phrase)
+
+    if intent not in SUPPORTED_INTENTS:
+        return IntentResult(intent=None, parameters={})
+
+    return IntentResult(intent=intent, parameters={})

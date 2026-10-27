@@ -1,4 +1,5 @@
+
+pytest>=7.0.0
 vosk
 sounddevice
 python-vlc
-pytest

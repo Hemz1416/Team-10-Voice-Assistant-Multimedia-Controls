@@ -1,40 +1,48 @@
+"""Validate commands before they reach the media controller."""
 
-ALLOWED_INTENTS = {
-    "PLAY",
-    "PAUSE",
-    "RESUME",
-    "STOP",
-    "NEXT",
-    "PREVIOUS",
-    "VOLUME_UP",
-    "VOLUME_DOWN",
-    "MUTE",
-}
+import math
 
-# Initial prototype threshold; validate and tune with test data.
-MIN_CONFIDENCE = 0.50
+from src.intent_processor import SUPPORTED_INTENTS
+from src.models import IntentResult, ValidationResult
 
 
-def validate_command(intent_result):
-    intent = intent_result.get("intent")
-    confidence = intent_result.get("confidence")
+def validate_command(
+    result: IntentResult,
+    confidence: float,
+    minimum_confidence: float = 0.70,
+) -> ValidationResult:
+    """Reject invalid, unsupported, or low-confidence commands."""
 
-    if intent not in ALLOWED_INTENTS:
-        return {
-            "allowed": False,
-            "intent": None,
-            "reason": "Unsupported command",
-        }
+    if (
+        not isinstance(minimum_confidence, (int, float))
+        or isinstance(minimum_confidence, bool)
+        or not math.isfinite(minimum_confidence)
+        or not 0 <= minimum_confidence <= 1
+    ):
+        return ValidationResult(
+            False, None, "invalid_minimum_confidence"
+        )
 
-    if confidence is not None and confidence < MIN_CONFIDENCE:
-        return {
-            "allowed": False,
-            "intent": None,
-            "reason": "Confidence too low",
-        }
+    if (
+        not isinstance(confidence, (int, float))
+        or isinstance(confidence, bool)
+        or not math.isfinite(confidence)
+        or not 0 <= confidence <= 1
+    ):
+        return ValidationResult(False, None, "invalid_confidence")
 
-    return {
-        "allowed": True,
-        "intent": intent,
-        "reason": "Supported command",
-    }
+    if not isinstance(result, IntentResult):
+        return ValidationResult(
+            False, None, "invalid_intent_result"
+        )
+
+    if not isinstance(result.intent, str):
+        return ValidationResult(False, None, "invalid_intent")
+
+    if confidence < minimum_confidence:
+        return ValidationResult(False, None, "low_confidence")
+
+    if result.intent not in SUPPORTED_INTENTS:
+        return ValidationResult(False, None, "unsupported_intent")
+
+    return ValidationResult(True, result, "accepted")
