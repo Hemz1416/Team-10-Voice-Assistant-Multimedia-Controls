@@ -2,9 +2,8 @@
 name: Python Tests
 
 on:
+  push:
   pull_request:
-    branches:
-      - yash/integration-foundation
 
 jobs:
   test:
