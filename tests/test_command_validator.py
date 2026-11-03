@@ -75,6 +75,22 @@ class TestCommandValidator(unittest.TestCase):
         self.assertFalse(result.allowed)
         self.assertEqual(result.reason, "invalid_intent")
 
+    def test_confidence_at_threshold_is_accepted(self):
+        result = validate_command(
+            IntentResult("PLAY", {}),
+            0.70,
+        )
+        self.assertTrue(result.allowed)
+        self.assertEqual(result.reason, "accepted")
+
+    def test_zero_confidence_is_rejected(self):
+        result = validate_command(
+            IntentResult("PLAY", {}),
+            0.0,
+        )
+        self.assertFalse(result.allowed)
+        self.assertEqual(result.reason, "low_confidence")
+
 
 if __name__ == "__main__":
     unittest.main()
