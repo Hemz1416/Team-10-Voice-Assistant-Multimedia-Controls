@@ -25,6 +25,8 @@ PHRASE_MAP = {
     "start playing": "PLAY",
     "start playback": "PLAY",
     "start music": "PLAY",
+    "start the music": "PLAY",
+    "play the song": "PLAY",
 
     # Pause
     "pause": "PAUSE",
@@ -47,19 +49,26 @@ PHRASE_MAP = {
     "next": "NEXT",
     "next track": "NEXT",
     "next song": "NEXT",
+    "skip track": "NEXT",
+    "skip song": "NEXT",
+    "go to next track": "NEXT",
     "previous": "PREVIOUS",
     "previous track": "PREVIOUS",
     "previous song": "PREVIOUS",
+    "go to previous track": "PREVIOUS",
+    "go back a track": "PREVIOUS",
 
     # Volume
     "volume up": "VOLUME_UP",
     "increase volume": "VOLUME_UP",
     "turn volume up": "VOLUME_UP",
     "turn the volume up": "VOLUME_UP",
+    "turn it up": "VOLUME_UP",
     "volume down": "VOLUME_DOWN",
     "decrease volume": "VOLUME_DOWN",
     "turn volume down": "VOLUME_DOWN",
     "turn the volume down": "VOLUME_DOWN",
+    "turn it down": "VOLUME_DOWN",
 
     # Mute
     "mute": "MUTE",
