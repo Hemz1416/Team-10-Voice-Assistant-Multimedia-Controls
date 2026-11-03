@@ -1,67 +1,55 @@
 # Branch Coverage Report
 
-## 1. Project Information
+## 1. Overview
 
-| Field | Value |
-|---|---|
-| Project | Team 10 – Voice Assistant for Multimedia Controls |
-| Report | Branch Coverage Report |
-| Measurement date | 2026-11-03 |
-| Source scope | `src/` |
-| Source snapshot | `73e7425` (source archive supplied for this report run) |
-| Environment | Linux x86_64, Python 3.13.5, pytest 9.0.2, Coverage.py 7.13.3 |
+Branch coverage was measured on the Windows project environment using coverage.py 7.17.0 with branch measurement enabled.
 
-## 2. Objective and Method
+## 2. Execution Details
 
-Branch coverage measures whether the possible destinations of conditional control-flow decisions in the source code were exercised by the test suite. The measurement was generated together with statement coverage.
+Command used:
 
-**Execution commands:**
+`python -m coverage run --branch -m pytest tests -v`
 
-```bash
-python -m coverage erase
-python -m coverage run --branch --source=src -m pytest -q
-python -m coverage json -o coverage.json
-```
+Coverage report command:
 
-## 3. Overall Results
+`python -m coverage report --include="src/*" -m`
+
+Test execution result:
+- 125 tests passed
+- 20 subtests passed
+- 0 failed tests
+- Execution time: 1.10 seconds
+
+## 3. Branch Coverage Results
+
+Application source directory: `src/`
 
 | Metric | Result |
 |---|---:|
-| Total branch destinations measured | 142 |
-| Branch destinations executed | 97 |
-| Branch destinations not executed | 45 |
-| Partially covered branches reported by Coverage.py | 19 |
-| **Branch coverage** | **68.3%** |
+| Total branches | 124 |
+| Partially covered branches | 21 |
+| Fully covered branches | 103 |
+| Branch coverage | 83% |
 
-Branch coverage is calculated as 97 executed branch destinations divided by 142 measured branch destinations.
+## 4. Module-Level Branch and Coverage Results
 
-## 4. Branch Coverage by Source Module
+| Module | Branches | Partial branches | Total coverage |
+|---|---:|---:|---:|
+| command_service.py | 8 | 1 | 93% |
+| command_validator.py | 12 | 0 | 100% |
+| intent_processor.py | 14 | 1 | 95% |
+| media_controller.py | 90 | 19 | 85% |
+| models.py | 0 | 0 | 100% |
 
-| Source module | Branches measured | Branches covered | Branches not covered | Branch coverage |
-|---|---:|---:|---:|---:|
-| `src/command_service.py` | 8 | 7 | 1 | 87.5% |
-| `src/command_validator.py` | 12 | 12 | 0 | 100.0% |
-| `src/feedback.py` | 2 | 0 | 2 | 0.0% |
-| `src/integration_app.py` | 12 | 0 | 12 | 0.0% |
-| `src/intent_processor.py` | 14 | 13 | 1 | 92.9% |
-| `src/media_controller.py` | 90 | 65 | 25 | 72.2% |
-| `src/speech_input.py` | 4 | 0 | 4 | 0.0% |
-| **Total** | **142** | **97** | **45** | **68.3%** |
+Note: `src/__init__.py` contains no measured statements or branches.
 
-`src/__init__.py`, `src/event_logger.py`, and `src/models.py` contain no measured branch destinations in this run, so a branch percentage is not applicable to those modules.
+## 5. Analysis
 
-## 5. Interpretation
+- Application source branch coverage reached 83%.
+- The media controller accounts for most partially covered branches.
+- The command validator achieved complete coverage of its measured branches.
+- Additional tests could target unexecuted error-handling and conditional paths in the media controller.
 
-All measured branches in `command_validator.py` were exercised. The intent processor and command service also achieved high branch coverage. Remaining uncovered branch destinations are concentrated in the media controller and the application orchestration, feedback, and speech-input paths.
+## 6. Conclusion
 
-The zero branch coverage in `integration_app.py`, `speech_input.py`, and `feedback.py` indicates that the current automated suite did not exercise those conditional paths. Additional tests using the full application entry point and suitable audio/input test doubles would be needed to measure those paths.
-
-## 6. Limitations
-
-- This report applies to source snapshot `73e7425`; regenerate coverage on the final repository `main` branch if source files changed after that snapshot.
-- Branch coverage is a test-execution metric. It does not establish that requirements are satisfied or that all output combinations are correct.
-- The automated integration tests use fake VLC components; no branch-coverage claim is made for a live microphone, physical audio device, or real VLC session beyond what the source-level tests exercised.
-
-## 7. Conclusion
-
-Measured branch coverage was **68.3% (97/142 branch destinations)**. The test suite exercised all branches in command validation, with remaining gaps concentrated in media-controller decisions and modules not exercised by the current automated run. The measured result is recorded as evidence; no minimum branch-coverage target was specified in the available evaluation checklist or FAQ.
+The branch coverage run completed successfully on Windows. The application source code achieved 83% branch coverage across 124 measured branches. These results provide a measured view of conditional-path testing and identify areas for further test improvement.
