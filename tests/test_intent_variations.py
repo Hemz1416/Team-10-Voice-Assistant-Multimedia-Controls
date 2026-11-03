@@ -18,6 +18,10 @@ from src.intent_processor import detect_intent
         ("dont play music", None),
         ("play music and stop", None),
         ("open browser", None),
+        ("maybe pause the music", None),
+        ("turn it", None),
+        ("skip", None),
+        ("play something and pause", None),
     ],
 )
 def test_intent_variations(phrase, expected):
