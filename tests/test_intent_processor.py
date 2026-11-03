@@ -24,6 +24,27 @@ class TestIntentProcessor(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertEqual(detect_intent(phrase).intent, expected)
 
+    def test_additional_natural_language_phrases(self):
+        cases = {
+            "start the music": "PLAY",
+            "play the song": "PLAY",
+            "skip track": "NEXT",
+            "skip song": "NEXT",
+            "go to next track": "NEXT",
+            "go to previous track": "PREVIOUS",
+            "go back a track": "PREVIOUS",
+            "turn it up": "VOLUME_UP",
+            "turn it down": "VOLUME_DOWN",
+        }
+
+        for phrase, expected in cases.items():
+            with self.subTest(phrase=phrase):
+                self.assertEqual(
+                    detect_intent(phrase).intent,
+                    expected
+            )
+
+
     def test_case_and_whitespace(self):
         self.assertEqual(
             detect_intent("  PLAY MUSIC  ").intent,
