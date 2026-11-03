@@ -4,107 +4,80 @@
 
 - **Project:** Team 10 – Voice Assistant for Multimedia Controls
 - **Sprint:** Sprint 2 – Product and Testing
-- **Report Type:** Test Summary Report
-- **Test Environment:** Windows
-- **Python Version:** 3.13.1
-- **Pytest Version:** 8.3.4
+- **Report Type:** Final Test Summary Report
+- **Final targeted test environment:** Windows, Python 3.11.9, pytest 9.1.1
+- **Execution date:** 2026-11-03
 
 ## 2. Testing Objective
 
-The objective of testing is to evaluate the voice assistant's functional behavior, security validation, reliability, performance, and privacy.
+The objective of testing is to evaluate functional behavior, command validation, security-related input handling, media-controller operations, software integration, reliability scenarios, performance, and privacy-related requirements.
 
-This report summarizes the test evidence currently available and identifies areas that still require verification.
+This report summarizes the historical and later automated test executions and identifies requirements that remain unverified.
 
 ## 3. Test Execution Summary
 
-The additional automated test file `tests/test_additional_security_nfr.py` was executed.
+| Test Execution | Passed | Failed | Errors | Skipped | Duration |
+|---|---:|---:|---:|---:|---:|
+| Historical additional security/NFR tests | 13 | 0 | 0 | 0 | 0.09 sec |
+| Final targeted unit tests | 93 | 0 | 0 | 0 | 0.69 sec |
+| Final system-validation tests | 19 | 0 | 0 | 0 | 0.20 sec |
 
-| Test Result | Count |
-|---|---:|
-| Passed | 13 |
-| Failed | 0 |
-| Blocked | 0 |
-| Total | 13 |
+The unit-test execution also reported 20 additional passing subtests. These are reported separately from the 93 pytest test cases.
 
-**Execution command:**
+The executions above were separate runs. Their counts are not presented as one combined test-suite execution.
 
-```bash
-python -m pytest tests/test_additional_security_nfr.py -v -s
-```
+## 4. Test Environments
 
-**Observed output:**
-- Test execution time: 0.09 seconds.
-- Command-service execution time: 0.009 ms.
-- Result: 13 passed in 0.09 seconds.
+**Historical additional security/NFR execution:**
+- Operating system: Windows 10
+- Python: 3.13.1
+- Pytest: 8.3.4
 
-## 4. Testing Areas Covered
+**Later targeted unit and system-validation executions:**
+- Operating system: Windows
+- Python: 3.11.9
+- Pytest: 9.1.1
 
-| Testing Area | Current Evidence | Status |
+The results are kept separate because they were collected using different environments and test scopes.
+
+## 5. Testing Areas Covered
+
+| Testing Area | Evidence | Result |
 |---|---|---|
-| Command validation | Automated validation tests | Executed |
-| Unsupported intent rejection | Automated security tests | Executed |
-| Controller error handling | Automated reliability tests | Executed |
-| Repeated command execution | Automated reliability tests | Executed |
-| Command-service timing | Service-call timing measurement | Recorded |
-| Full application functional testing | Complete results not available | Pending |
-| Speech recognition accuracy | No measurement available | Not Run |
-| Application startup performance | No measurement available | Not Run |
-| End-to-end response latency | No measurement available | Not Run |
-| Audio privacy | No verification available | Not Run |
-| Application-level access control | No verification available | Not Run |
+| Command-service behavior | Targeted unit tests | Passed |
+| Command normalization and validation | Targeted unit tests | Passed |
+| Intent processing and variations | Targeted unit tests | Passed |
+| Confidence validation | Unit and system-validation tests | Passed |
+| Unsupported and ambiguous command rejection | Unit and system-validation tests | Passed |
+| Media-controller operations | Targeted unit tests | Passed |
+| Controller error handling | Unit and system-validation tests | Passed |
+| Software media integration behavior | System-validation tests using simulated VLC interface | Passed |
+| Native libVLC product demonstration | Separate Sprint 2 demonstration evidence | Demonstrated |
+| Speech-recognition accuracy measurement | No formal measurement available | Not Run |
+| Full application startup performance | No measurement available | Not Run |
+| End-to-end voice-command latency | No measurement available | Not Run |
+| Two-hour continuous-operation reliability | No measurement available | Not Run |
+| Complete microphone privacy verification | No verification available | Not Verified |
+| Complete application-level access control | No verification available | Not Verified |
 
-## 5. Defect Summary
+## 6. Defect Summary
 
-No confirmed defects have been recorded from the available additional test execution.
+The recorded automated executions reported zero failures and zero errors.
 
-This statement applies only to the available test evidence. It does not establish that the complete application is defect-free.
-
-## 6. Retesting Summary
-
-No confirmed fixed defects or retest executions have been recorded yet.
-
-Retesting must be documented when defects are fixed.
+This statement applies to the test executions documented in this report. It does not establish that the complete application is defect-free.
 
 ## 7. Performance Summary
 
-Two measurements are currently available:
-
-- Additional test-suite execution time: 0.09 seconds.
+The historical additional security/NFR execution recorded:
+- Test-suite execution time: 0.09 seconds.
 - Command-service execution time: 0.009 ms.
 
-These measurements do not represent complete application startup time or end-to-end voice command response time.
+The later targeted unit and system-validation executions recorded:
+- Unit-test execution time: 0.69 seconds.
+- System-validation execution time: 0.20 seconds.
+
+These are test execution and service-call measurements. They do not establish full application startup time or microphone-to-response latency.
 
 ## 8. Security and Privacy Summary
 
-The additional automated tests passed the covered unsupported-intent rejection, command validation, controller execution protection, and error-handling scenarios.
-
-Actual microphone privacy, audio storage, application file permissions, and complete application access control remain unverified.
-
-## 9. Limitations
-
-- The current execution evidence covers only `tests/test_additional_security_nfr.py`.
-- The tests use a simulated media controller.
-- Complete application integration testing has not been established by this test run.
-- Performance measurements are limited to the values recorded above.
-- Privacy and application-level security checks remain pending.
-
-## 10. Overall Assessment
-
-<text>**Current result:** 13 passed, 0 failed in the additional automated test file.</text>
-
-The available evidence demonstrates that the specific automated security and reliability scenarios passed. However, the complete testing activity is not yet finished.
-
-Further functional, integration, performance, security, privacy, and retesting activities are required before the project can be declared ready for final release.
-
-## 11. Supporting Documents
-
-- `test_execution_records.md`
-- `defect_log.md`
-- `retest_records.md`
-- `performance_metrics.md`
-- `security_privacy_report.md`
-- `requirements_traceability_matrix.md`
-
-## 12. Conclusion
-
-The available automated test execution was successful for all 13 test cases in the additional security and reliability test file. Remaining test activities must be completed and their actual results recorded before final release approval.
+The automated tests provide evidence for the tested command-validation scenarios, unsupported-intent rejection, confidence validation, controller execution

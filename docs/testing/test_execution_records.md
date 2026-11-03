@@ -1,107 +1,106 @@
 # Test Execution Records
 ## Voice Assistant for Multimedia Controls
 
-**Project:** Voice Assistant for Multimedia Controls  
+**Project:** Team 10 – Voice Assistant for Multimedia Controls
 **Sprint:** Sprint 2 – Product and Testing  
-**Tester:** Keerthi B Patil  
-**Environment:** Windows 10, Python 3.13.1, pytest 8.3.4  
-**Test File:** `tests/test_additional_security_nfr.py`
+**Final test environment:** Windows, Python 3.11.9, pytest 9.1.1
+**Execution date:** 2026-11-03
 
 ---
 
 ## 1. Objective
 
-The purpose of this document is to maintain records of test execution for the Voice Assistant for Multimedia Controls project.
-
-It records actual test outcomes, including Passed, Failed, Blocked and Not Run test cases.
+This document records the automated test executions performed during the project, including historical additional security testing and the later unit and system-validation test runs.
 
 ## 2. Test Execution Summary
 
-| Category | Passed | Failed | Blocked | Not Run |
-|---|---:|---:|---:|---:|
-| Additional Security and NFR Tests | 13 | 0 | 0 | 0 |
-| Other Functional Tests | Not yet verified | — | — | — |
-| Additional Security Tests | 0 | 0 | 0 | Pending |
-| Performance and Accuracy Tests | 0 | 0 | 0 | Pending |
-| Privacy Tests | 0 | 0 | 0 | Pending |
+| Test execution | Passed | Failed | Errors | Skipped | Duration |
+|---|---:|---:|---:|---:|---:|
+| Historical additional security/NFR tests | 13 | 0 | 0 | 0 | 0.09 sec |
+| Final targeted unit tests | 93 | 0 | 0 | 0 | 0.69 sec |
+| Final system-validation tests | 19 | 0 | 0 | 0 | 0.20 sec |
 
-**Note:** Only the additional security and NFR test file has a confirmed execution result in this record. Other categories will be updated after execution.
+The 20 additional subtests reported in the unit-test execution are recorded separately and are not included in the 93 pytest test cases.
 
-## 3. Confirmed Test Execution Results
+These are separate test executions. Their counts should not be interpreted as one combined pytest run.
 
-**Execution command:**
+## 3. Historical Additional Security/NFR Execution
 
+**Test file:** `tests/test_additional_security_nfr.py`
+
+**Command:**
 ```bash
 python -m pytest tests/test_additional_security_nfr.py -v -s
 ```
 
-**Actual result:** 13 passed, 0 failed.
+**Environment:** Windows 10, Python 3.13.1, pytest 8.3.4.
 
-| Test ID | Test Case | Actual Result |
-|---|---|---|
-| REL-01 | Repeated command execution | PASS |
-| REL-02 | Multiple supported commands | PASS |
-| REL-03 | Controller recovery after failure | PASS |
-| SEC-01 | Reject DELETE_FILES intent | PASS |
-| SEC-02 | Reject RUN_TERMINAL intent | PASS |
-| SEC-03 | Reject EXECUTE_SCRIPT intent | PASS |
-| SEC-04 | Reject ACCESS_PASSWORDS intent | PASS |
-| SEC-05 | Reject SYSTEM_SHUTDOWN intent | PASS |
-| SEC-06 | Rejected intent never reaches controller | PASS |
-| SEC-07 | Invalid confidence prevents execution | PASS |
-| NFR-01 | Command-service execution time measurement | PASS |
-| REL-04 | Repeated controller failures are handled | PASS |
-| SEC-08 | Controller exception details are not exposed | PASS |
+**Result:** 13 passed, 0 failed, in 0.09 seconds.
 
-## 4. Execution Environment and Observations
+This historical execution covered repeated command handling, controller recovery, unsupported-intent rejection, confidence validation, command-service timing, and exception handling.
 
-| Parameter | Recorded Value |
-|---|---|
-| Operating system | Windows 10 |
-| Python version | 3.13.1 |
-| Pytest version | 8.3.4 |
-| Total test cases executed | 13 |
-| Passed | 13 |
-| Failed | 0 |
-| Pytest execution duration | 0.09 seconds |
-| Command-service execution time | 0.009 ms |
+## 4. Final Unit-Test Execution
 
-The command-service timing measures only the Python service call. It does not represent complete voice-command response time.
+**Test files:**
+- `tests/test_command_service.py`
+- `tests/test_command_validator.py`
+- `tests/test_intent_processor.py`
+- `tests/test_intent_variations.py`
+- `tests/test_media_controller.py`
+- `tests/test_security_nfr.py`
 
-## 5. Tests Pending Execution
+**Command:**
+```cmd
+python -m pytest tests/test_command_service.py tests/test_command_validator.py tests/test_intent_processor.py tests/test_intent_variations.py tests/test_media_controller.py tests/test_security_nfr.py -v
+```
 
-The following tests require additional testing and evidence:
+**Environment:** Windows, Python 3.11.9, pytest 9.1.1.
 
-| Test ID | Test Case | Status |
-|---|---|---|
-| NFR-02 | Speech recognition accuracy | NOT RUN |
-| NFR-03 | Application startup time | NOT RUN |
-| NFR-04 | Microphone-to-response latency | NOT RUN |
-| NFR-05 | User feedback latency | NOT RUN |
-| NFR-06 | Long-duration reliability | NOT RUN |
-| SEC-09 | Raw audio privacy and storage | NOT RUN |
-| SEC-10 | Sensitive information in logs | NOT RUN |
-| SEC-11 | Configuration and log file permissions | NOT RUN |
-| SEC-12 | Unauthorized access protection, if applicable | NOT RUN |
+**Result:** 93 passed, 0 failed, 0 errors, 0 skipped, in 0.69 seconds. An additional 20 subtests passed.
 
-## 6. Defect and Retest Status
+## 5. Final System-Validation Execution
 
-No defects or retest outcomes are confirmed by the execution output recorded above.
+**Test files:**
+- `tests/test_functional_commands.py`
+- `tests/test_media_integration.py`
 
-Defects discovered during further testing will be documented separately in `defect_log.md`.
+**Command:**
+```cmd
+python -m pytest tests/test_functional_commands.py tests/test_media_integration.py -v
+```
 
-Fix verification will be recorded in `retest_records.md`.
+**Environment:** Windows, Python 3.11.9, pytest 9.1.1.
 
-## 7. Limitations
+**Result:** 19 passed, 0 failed, 0 errors, 0 skipped, in 0.20 seconds.
 
-- The additional security/NFR tests use a simulated media controller.
-- The tests validate the tested command-service behavior, not the complete application.
-- Speech recognition accuracy has not yet been measured.
-- Full application startup and response time have not yet been measured.
-- Audio privacy and file permissions require separate verification.
+These tests cover supported command routing, rejection of unsupported and ambiguous input, low-confidence protection, media-controller integration behavior, and controller error handling.
+
+The integration tests use a simulated VLC interface and do not independently establish physical audio output.
+
+## 6. Separate Product Demonstration Evidence
+
+The Sprint 2 demonstration script was also documented as executing the nine supported voice intents successfully on a native libVLC runtime.
+
+The demonstration includes PLAY, PAUSE, RESUME, VOLUME_UP, VOLUME_DOWN, NEXT, PREVIOUS, MUTE, and STOP operations.
+
+The recorded demonstration is supplementary product evidence, not an additional automated pytest execution.
+
+## 7. Remaining Verification
+
+The following areas have not been established by the recorded automated test runs:
+
+- Formal speech-recognition accuracy measurement.
+- Full application startup-time measurement.
+- End-to-end microphone-to-response latency.
+- User-feedback latency measurement.
+- Two-hour continuous-operation reliability.
+- Complete microphone audio privacy verification.
+- Complete application-level file permission and access-control verification.
+
+These requirements must remain marked as not verified until separate evidence is available.
 
 ## 8. Conclusion
 
-The additional security and NFR test file executed successfully with 13 passed and 0 failed tests.
+The historical additional security/NFR execution passed 13 tests. The later targeted unit-test execution passed 93 pytest cases and 20 additional subtests. The later system-validation execution passed 19 cases.
 
-Further functional, performance, accuracy, reliability and privacy testing is required before the final release test summary can be completed.
+All reported executions had zero failures. The results provide evidence for the tested component and software integration behavior. They do not establish that every performance, privacy, hardware, or non-functional requirement has been satisfied.
