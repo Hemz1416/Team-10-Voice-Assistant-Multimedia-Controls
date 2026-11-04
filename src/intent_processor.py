@@ -5,7 +5,6 @@ import re
 
 from src.models import IntentResult
 
-
 SUPPORTED_INTENTS = {
     "PLAY",
     "PAUSE",

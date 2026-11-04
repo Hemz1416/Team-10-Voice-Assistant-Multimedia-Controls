@@ -6,9 +6,9 @@ Scope: Diagnostic check for Python runtime, native libVLC loading,
        and audio device availability without invoking OS command shells (VA-SR-004).
 """
 
-import sys
-import platform
 import os
+import platform
+import sys
 
 
 def verify_python_runtime():
@@ -31,16 +31,16 @@ def verify_libvlc():
         if instance is None:
             print("[FAIL] vlc.Instance() returned None.")
             return False
-        
+
         player = instance.media_player_new()
         if player is None:
             print("[FAIL] instance.media_player_new() returned None.")
             return False
-        
+
         vlc_version = vlc.libvlc_get_version()
         if isinstance(vlc_version, bytes):
             vlc_version = vlc_version.decode("utf-8", errors="replace")
-        
+
         print(f"[PASS] Native libVLC successfully loaded: {vlc_version}")
         print("[PASS] Successfully initialized vlc.Instance and vlc.MediaPlayer.")
         return True
@@ -80,7 +80,7 @@ def verify_audio_hardware():
         alsa_card_path = "/proc/asound/cards"
         if os.path.exists(alsa_card_path):
             try:
-                with open(alsa_card_path, "r", encoding="utf-8") as f:
+                with open(alsa_card_path, encoding="utf-8") as f:
                     content = f.read().strip()
                 print("[INFO] ALSA Sound Cards:")
                 print(content)
@@ -112,7 +112,7 @@ def main():
     print(f"  - Python Runtime:       {'OK' if py_ok else 'FAILED'}")
     print(f"  - libVLC Native Engine: {'OK' if vlc_ok else 'FAILED'}")
     print(f"  - Sound Devices:        {'OK' if audio_ok else 'WARNING'}")
-    print(f"  - Raspberry Pi:         BLOCKED / NOT CONNECTED (Workstation Smoke Check Passed)")
+    print("  - Raspberry Pi:         BLOCKED / NOT CONNECTED (Workstation Smoke Check Passed)")
     print("=" * 60)
 
     if py_ok and vlc_ok:

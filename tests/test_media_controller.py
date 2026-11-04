@@ -7,7 +7,9 @@ No physical microphone, speakers, VLC GUI, or Raspberry Pi hardware required.
 """
 
 from pathlib import Path
+
 import pytest
+
 from src.media_controller import MediaController
 
 
@@ -394,7 +396,7 @@ def test_previous_track_sequential_backward(controller, mock_files):
 
 
 # =========================================================================
-# 4. Volume Increment, Decrement, and Limits (Inclusive 0–100%)
+# 4. Volume Increment, Decrement, and Limits (Inclusive 0-100%)
 # =========================================================================
 
 

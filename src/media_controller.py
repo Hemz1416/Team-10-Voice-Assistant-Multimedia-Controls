@@ -9,8 +9,9 @@ PLAY, PAUSE, RESUME, STOP, NEXT, PREVIOUS, VOLUME_UP, VOLUME_DOWN, MUTE.
 from __future__ import annotations
 
 import os
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any
 
 try:
     import vlc
@@ -46,9 +47,9 @@ class MediaController:
 
     def __init__(
         self,
-        media_files: Optional[Sequence[Union[str, Path]]] = None,
-        vlc_instance: Optional[Any] = None,
-        player: Optional[Any] = None,
+        media_files: Sequence[str | Path] | None = None,
+        vlc_instance: Any | None = None,
+        player: Any | None = None,
     ) -> None:
         """Initialize the media controller with a playlist and VLC player.
 
@@ -57,7 +58,7 @@ class MediaController:
             vlc_instance: Optional injected VLC instance (for mocking/testing).
             player: Optional injected VLC media player (for mocking/testing).
         """
-        self._media_files: List[str] = [str(f) for f in media_files] if media_files else []
+        self._media_files: list[str] = [str(f) for f in media_files] if media_files else []
         self._current_index: int = 0
         self._volume: int = self.DEFAULT_VOLUME
         self._is_muted: bool = False
@@ -92,7 +93,7 @@ class MediaController:
             self.player = None
 
     @property
-    def media_files(self) -> List[str]:
+    def media_files(self) -> list[str]:
         """Return the current playlist."""
         return list(self._media_files)
 
@@ -103,7 +104,7 @@ class MediaController:
 
     @property
     def volume(self) -> int:
-        """Return current volume percentage within inclusive 0–100%."""
+        """Return current volume percentage within inclusive 0-100%."""
         return self._volume
 
     @property
@@ -111,13 +112,13 @@ class MediaController:
         """Return mute state."""
         return self._is_muted
 
-    def get_current_track(self) -> Optional[str]:
+    def get_current_track(self) -> str | None:
         """Return path of current track if playlist is non-empty."""
         if 0 <= self._current_index < len(self._media_files):
             return self._media_files[self._current_index]
         return None
 
-    def execute(self, intent: str) -> Dict[str, Any]:
+    def execute(self, intent: str) -> dict[str, Any]:
         """Execute a normalized multimedia intent.
 
         Args:
@@ -163,7 +164,7 @@ class MediaController:
                 "error_details": str(exc),
             }
 
-    def play(self) -> Dict[str, Any]:
+    def play(self) -> dict[str, Any]:
         """Start or resume playback of the current track."""
         if not self._media_files:
             return {
@@ -227,7 +228,7 @@ class MediaController:
                 "error_details": str(exc),
             }
 
-    def pause(self) -> Dict[str, Any]:
+    def pause(self) -> dict[str, Any]:
         """Pause ongoing media playback."""
         if not self.vlc_available or self.player is None:
             return {
@@ -268,7 +269,7 @@ class MediaController:
                 "error_details": str(exc),
             }
 
-    def resume(self) -> Dict[str, Any]:
+    def resume(self) -> dict[str, Any]:
         """Resume playback if paused, or start if stopped."""
         if not self.vlc_available or self.player is None:
             return {
@@ -314,7 +315,7 @@ class MediaController:
         # If not paused, start playback
         return self.play()
 
-    def stop(self) -> Dict[str, Any]:
+    def stop(self) -> dict[str, Any]:
         """Stop playback completely."""
         if not self.vlc_available or self.player is None:
             return {
@@ -340,7 +341,7 @@ class MediaController:
                 "error_details": str(exc),
             }
 
-    def next_track(self) -> Dict[str, Any]:
+    def next_track(self) -> dict[str, Any]:
         """Advance to the next track, wrapping around from end to beginning."""
         if not self._media_files:
             return {
@@ -353,7 +354,7 @@ class MediaController:
         self._is_paused = False
         return self.play()
 
-    def previous_track(self) -> Dict[str, Any]:
+    def previous_track(self) -> dict[str, Any]:
         """Navigate to the previous track, wrapping around from first to last."""
         if not self._media_files:
             return {
@@ -366,7 +367,7 @@ class MediaController:
         self._is_paused = False
         return self.play()
 
-    def _set_player_volume(self, target_volume: int) -> Tuple[bool, Optional[str]]:
+    def _set_player_volume(self, target_volume: int) -> tuple[bool, str | None]:
         """Attempt to set volume on the player. Returns (success, error_detail)."""
         if not self.vlc_available or self.player is None:
             return False, "Player instance not initialized or VLC unavailable."
@@ -378,10 +379,10 @@ class MediaController:
                 if ret == -1:
                     return False, "Underlying audio engine rejected volume setting (returned -1)."
             except Exception as exc:
-                return False, f"Exception in audio_set_volume: {str(exc)}"
+                return False, f"Exception in audio_set_volume: {exc!s}"
         return True, None
 
-    def _set_player_mute(self, target_mute: bool) -> Tuple[bool, Optional[str]]:
+    def _set_player_mute(self, target_mute: bool) -> tuple[bool, str | None]:
         """Attempt to set mute on the player. Returns (success, error_detail)."""
         if not self.vlc_available or self.player is None:
             return False, "Player instance not initialized or VLC unavailable."
@@ -392,11 +393,11 @@ class MediaController:
                 if ret == -1:
                     return False, "Underlying audio engine rejected mute toggle (returned -1)."
             except Exception as exc:
-                return False, f"Exception in audio_set_mute: {str(exc)}"
+                return False, f"Exception in audio_set_mute: {exc!s}"
         return True, None
 
-    def volume_up(self, step: Optional[int] = None) -> Dict[str, Any]:
-        """Increase volume by step (default 10), clamped within inclusive 0–100%."""
+    def volume_up(self, step: int | None = None) -> dict[str, Any]:
+        """Increase volume by step (default 10), clamped within inclusive 0-100%."""
         if not self.vlc_available or self.player is None:
             return {
                 "success": False,
@@ -422,8 +423,8 @@ class MediaController:
             "volume": self._volume,
         }
 
-    def volume_down(self, step: Optional[int] = None) -> Dict[str, Any]:
-        """Decrease volume by step (default 10), clamped within inclusive 0–100%."""
+    def volume_down(self, step: int | None = None) -> dict[str, Any]:
+        """Decrease volume by step (default 10), clamped within inclusive 0-100%."""
         if not self.vlc_available or self.player is None:
             return {
                 "success": False,
@@ -449,7 +450,7 @@ class MediaController:
             "volume": self._volume,
         }
 
-    def toggle_mute(self) -> Dict[str, Any]:
+    def toggle_mute(self) -> dict[str, Any]:
         """Toggle mute state predictably."""
         if not self.vlc_available or self.player is None:
             return {

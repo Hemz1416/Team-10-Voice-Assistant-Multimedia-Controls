@@ -9,12 +9,11 @@ PLAY, PAUSE, RESUME, NEXT, PREVIOUS, VOLUME_UP, VOLUME_DOWN, MUTE, STOP.
 
 import argparse
 import math
-import os
-from pathlib import Path
 import struct
 import sys
 import time
 import wave
+from pathlib import Path
 
 # Ensure src is importable
 repo_root = Path(__file__).resolve().parent.parent

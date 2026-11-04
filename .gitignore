@@ -45,3 +45,5 @@ logs/
 
 # Test coverage output
 .coverage
+
+coverage.xml
