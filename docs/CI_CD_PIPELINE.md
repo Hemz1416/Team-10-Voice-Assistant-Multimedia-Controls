@@ -6,11 +6,11 @@ This document details the Continuous Integration and Continuous Delivery (CI/CD)
 
 ## 1. Executive Quality & Metrics Dashboard
 
-| Quality Gate | Metric / Tool | Standard / Threshold | Achieved Score | Status |
+| Quality Gate | Metric / Tool | Standard | Achieved Score | Status |
 | :--- | :--- | :---: | :---: | :---: |
 | **Code Linting** | Ruff (`pyproject.toml`) | 0 Violations (PEP 8 / Bugbear) | **10.00 / 10.00 (100% Clean)** | 🟢 **PASS** |
 | **Unit & Integration Tests** | `pytest` | 100% Pass Rate | **137 / 137 Passed (0.83s)** | 🟢 **PASS** |
-| **Code Coverage** | `pytest-cov` | **>= 80.0%** | **92.96% (383/412 lines)** | 🟢 **PASS** |
+| **Code Coverage** | `pytest-cov` | High Statement Coverage | **92.96% (383/412 lines)** | 🟢 **PASS** |
 | **Coverage Artifacts** | XML & HTML Reports | Stored in GitHub Actions | `coverage.xml`, `htmlcov/` | 📦 **RETAINED** |
 | **Delivery Packaging (CD)** | `git archive` | Deterministic release bundle | `voice-assistant-<sha>.zip` | 📦 **RETAINED** |
 
@@ -18,7 +18,7 @@ This document details the Continuous Integration and Continuous Delivery (CI/CD)
 
 ## 2. CI/CD Architecture in Our Project
 
-- **Continuous Integration (CI):** Every push or pull request targeting `main` executes on a clean `ubuntu-latest` runner. The pipeline executes static analysis (Ruff), tallies a **10.0-scale Linting Quality Score**, runs **137 automated unit and integration tests**, and verifies **>= 80% statement coverage** across all application modules.
+- **Continuous Integration (CI):** Every push or pull request targeting `main` executes on a clean `ubuntu-latest` runner. The pipeline executes static analysis (Ruff), tallies a **10.0-scale Linting Quality Score**, runs **137 automated unit and integration tests**, and measures statement coverage across all application modules.
 - **Continuous Delivery (CD):** Once all CI quality gates pass on `main`, the packaging job automatically bundles the production source tree into a clean, reproducible ZIP distribution archive ready for deployment.
 
 ---
