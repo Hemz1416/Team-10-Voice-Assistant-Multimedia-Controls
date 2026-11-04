@@ -1,7 +1,7 @@
 """All-in-One Quality, Coverage, and Linting Dashboard Logger.
 
 Prints an executive scorecard combining:
-1. Code Coverage Score (>=80% gate)
+1. Code Coverage Score
 2. Code Linting Quality Score (10.0 scale)
 3. Test Suite Pass Summary
 Directly into the console log and $GITHUB_STEP_SUMMARY.
@@ -51,16 +51,12 @@ def generate_dashboard() -> int:
     grade = "A+ (PERFECT)" if v_count == 0 else ("A (EXCELLENT)" if v_count <= 3 else "B (GOOD)")
     lint_passed = v_count == 0
 
-    # 3. Print Consolidated Scorecard in Console Log (Where TA and Developers View)
-    threshold_diff = coverage_pct - 80.0
-    gate_status_str = f"PASSED (+{threshold_diff:0.2f}% above threshold)" if coverage_passed else "FAILED"
-
+    # 3. Print Consolidated Scorecard in Console Log
     print("\n" + "=" * 80)
     print("                     OFFICIAL CI/CD QUALITY SCORECARD")
     print("=" * 80)
     print(f"  [1] CODE COVERAGE SCORE:        {coverage_pct:.2f}% ({lines_covered}/{lines_valid} lines)")
-    print(f"      - Strict TA Gate (>=80%):   {gate_status_str}")
-    print(f"      - Quality Gate Status:      {'[PASSED - COMPLIANT]' if coverage_passed else '[FAILED]'}")
+    print(f"      - Quality Status:           {'[PASSED - COMPLIANT]' if coverage_passed else '[FAILED]'}")
     print()
     print(f"  [2] CODE LINTING SCORE:         {lint_score:.2f} / 10.00 (Grade: {grade})")
     print(f"      - Cleanliness Rating:       {cleanliness:.1f}% Clean Code")
@@ -76,17 +72,16 @@ def generate_dashboard() -> int:
     print(f"  [4] OVERALL PIPELINE RESULT:    [{overall_status}]")
     print("=" * 80 + "\n")
 
-    # 4. Write Markdown Dashboard to $GITHUB_STEP_SUMMARY
+    # 4. Write Clean Markdown Dashboard to $GITHUB_STEP_SUMMARY
     summary_path = os.getenv("GITHUB_STEP_SUMMARY")
     if summary_path:
         with open(summary_path, "a", encoding="utf-8") as f:
             f.write("## 🏆 Automated Quality & Metrics Scorecard\n\n")
-            f.write("| Quality Gate | Target / Standard | Achieved Score | Status |\n")
+            f.write("| Quality Metric | Target / Standard | Achieved Score | Status |\n")
             f.write("| :--- | :---: | :---: | :---: |\n")
-            f.write(f"| **Code Coverage** | **Strictly >= 80.0%** | **{coverage_pct:.2f}%** ({lines_covered}/{lines_valid} lines) | {'🟢 **PASSED**' if coverage_passed else '🔴 **FAILED**'} |\n")
+            f.write(f"| **Code Coverage** | **>= 80.0%** | **{coverage_pct:.2f}%** ({lines_covered}/{lines_valid} lines) | {'🟢 **PASSED**' if coverage_passed else '🔴 **FAILED**'} |\n")
             f.write(f"| **Code Linting** | 0 Violations (Ruff) | **{lint_score:.2f} / 10.00 ({grade})** | {'🟢 **PASSED**' if lint_passed else '🔴 **FAILED**'} |\n")
             f.write("| **Unit & Integration Tests** | 100% Pass Rate | **137 / 137 Passed** | 🟢 **PASSED** |\n")
-            f.write("| **Coverage Gate** | Hard Failure if < 80% | `--cov-fail-under=80` | 🟢 **ACTIVE** |\n")
             f.write("| **Packaging (CD)** | Deterministic ZIP | `voice-assistant-<sha>.zip` | 📦 **DELIVERED** |\n\n")
 
     return 0 if (coverage_passed and lint_passed) else 1
