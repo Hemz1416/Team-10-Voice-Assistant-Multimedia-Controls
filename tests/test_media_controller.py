@@ -6,7 +6,6 @@ mute toggling, error handling, and edge cases using pure fakes/mocks.
 No physical microphone, speakers, VLC GUI, or Raspberry Pi hardware required.
 """
 
-import os
 from pathlib import Path
 import pytest
 from src.media_controller import MediaController

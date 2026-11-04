@@ -5,8 +5,7 @@ import pytest
 
 from src.command_validator import validate_command
 from src.command_service import execute_validated_command
-from src.models import IntentResult, ValidationResult
-
+from src.models import IntentResult
 
 class FakeMediaController:
     """Simulates the media controller without performing real actions."""
