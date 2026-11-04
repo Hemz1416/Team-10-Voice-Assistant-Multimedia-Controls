@@ -118,6 +118,21 @@ class MediaController:
             return self._media_files[self._current_index]
         return None
 
+    def get_playback_state(self) -> dict[str, Any]:
+        """Return a structured snapshot of current playback state and audio settings.
+
+        Provides real-time state for status reporting, logging, and integration inspection.
+        """
+        return {
+            "current_track": self.get_current_track(),
+            "current_index": self._current_index,
+            "total_tracks": len(self._media_files),
+            "volume": self._volume,
+            "is_muted": self._is_muted,
+            "is_paused": self._is_paused,
+            "is_playing": self.is_playing(),
+        }
+
     def execute(self, intent: str) -> dict[str, Any]:
         """Execute a normalized multimedia intent.
 

@@ -615,3 +615,51 @@ def test_no_raw_exception_exposed_in_user_facing_status(controller):
     assert "error_details" in res
 
 
+# =========================================================================
+# 9. Real-Time Playback State Inspection Feature Tests
+# =========================================================================
+
+
+def test_get_playback_state_empty_playlist():
+    """Verify get_playback_state returns accurate diagnostics for empty playlist."""
+    ctrl = MediaController(media_files=[], vlc_instance=None, player=None)
+    ctrl.vlc_available = False
+    state = ctrl.get_playback_state()
+
+    assert state["current_track"] is None
+    assert state["current_index"] == 0
+    assert state["total_tracks"] == 0
+    assert state["volume"] == MediaController.DEFAULT_VOLUME
+    assert state["is_muted"] is False
+    assert state["is_paused"] is False
+    assert state["is_playing"] is False
+
+
+def test_get_playback_state_active_playlist(controller):
+    """Verify get_playback_state accurately reports loaded playlist details."""
+    state = controller.get_playback_state()
+
+    assert state["current_track"] == controller.media_files[0]
+    assert state["current_index"] == 0
+    assert state["total_tracks"] == len(controller.media_files)
+    assert state["volume"] == 70
+    assert state["is_muted"] is False
+    assert state["is_paused"] is False
+
+
+def test_get_playback_state_reflects_runtime_changes(controller):
+    """Verify get_playback_state updates dynamically when volume, mute, or track changes."""
+    # Adjust volume
+    controller.execute("VOLUME_UP")
+    # Toggle mute
+    controller.execute("MUTE")
+    # Advance track
+    controller.execute("NEXT")
+
+    state = controller.get_playback_state()
+    assert state["volume"] == 80
+    assert state["is_muted"] is True
+    assert state["current_index"] == 1
+    assert state["current_track"] == controller.media_files[1]
+
+
